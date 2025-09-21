@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { auth, loginWithGoogle, logout } from "utils/firebase";
-import { onAuthStateChanged, type User } from "firebase/auth";
+import { loginWithGoogle, logout, watchAuthState } from "utils/firebase";
+import type { Unsubscribe } from "firebase/auth";
+import type { User } from "utils/firebase";
 
 type AuthContextType = {
   user: User | null;
@@ -19,11 +20,32 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-      setLoading(false);
-    });
-    return () => unsub();
+    let unsubscribe: Unsubscribe | undefined;
+    let mounted = true;
+
+    (async () => {
+      try {
+        unsubscribe = await watchAuthState((currentUser) => {
+          if (!mounted) {
+            return;
+          }
+          setUser(currentUser);
+          setLoading(false);
+        });
+      } catch (error) {
+        console.error("No se pudo inicializar la sesión de Firebase", error);
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      mounted = false;
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
   }, []);
 
   const login = async () => {
