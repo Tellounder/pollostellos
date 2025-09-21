@@ -56,8 +56,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     await logout();
   };
 
+  const firstNameUser = user
+    ? ({
+        ...user,
+        displayName: user.displayName?.split(" ")[0] ?? user.displayName,
+      } as User)
+    : null;
+
   return (
-    <AuthContext.Provider value={{ user, login, logout: doLogout }}>
+    <AuthContext.Provider value={{ user: firstNameUser, login, logout: doLogout }}>
       {!loading && children}
     </AuthContext.Provider>
   );

@@ -15,23 +15,24 @@ export function AccessActions({ user, onStartAsGuest, onOpenLogin, onLogout, onG
   if (user) {
     return (
       <>
-        <h2 style={{ marginBottom: "1rem" }}>¡Bienvenido, {user.displayName || "Invitado"}!</h2>
-        <div className="row" style={{ justifyContent: "center", gap: "1rem", flexWrap: "wrap" }}>
-          <button className="btn-primary btn-inline" type="button" onClick={onGoToMenu}>
+        <h2 className="home-hero__greeting">¡Hola, {user.displayName || "crack"}!</h2>
+        <div className="home-hero__actions home-hero__actions--signed">
+          <button className="btn-primary home-hero__primary" type="button" onClick={onGoToMenu}>
             Ir al menú
           </button>
-          <button className="btn-secondary btn-inline" type="button" disabled title="Próximamente">
-            Mis pedidos
-          </button>
-          <button className="btn-secondary btn-inline" type="button" disabled title="Próximamente">
-            Descuentos aplicados
-          </button>
-          <button className="btn-secondary btn-inline" type="button" disabled title="Próximamente">
-            Mi perfil
-          </button>
+          <div className="home-hero__secondary">
+            <button className="btn-secondary btn-sm" type="button" disabled title="Próximamente">
+              Mis pedidos
+            </button>
+            <button className="btn-secondary btn-sm" type="button" disabled title="Próximamente">
+              Descuentos
+            </button>
+            <button className="btn-secondary btn-sm" type="button" disabled title="Próximamente">
+              Mi perfil
+            </button>
+          </div>
         </div>
-        <div className="space"></div>
-        <button className="btn-ghost" onClick={onLogout}>
+        <button className="btn-ghost home-hero__ghost" onClick={onLogout}>
           Cerrar sesión
         </button>
       </>
@@ -39,22 +40,24 @@ export function AccessActions({ user, onStartAsGuest, onOpenLogin, onLogout, onG
   }
 
   return (
-    <div className="row" style={{ justifyContent: "center" }}>
+    <div className="home-hero__actions">
       <button
-        className="btn-primary btn-inline"
+        className="btn-primary home-hero__primary"
         onClick={onStartAsGuest}
         aria-label="Continuar como invitado"
       >
         Continuar como invitado
       </button>
 
-      <button className="btn-secondary btn-inline" onClick={onOpenLogin}>
-        Iniciar sesión
-      </button>
+      <div className="home-hero__secondary">
+        <button className="btn-secondary btn-sm" onClick={onOpenLogin}>
+          Iniciar sesión
+        </button>
 
-      <button className="btn-secondary btn-inline" onClick={onOpenLogin}>
-        Registrarse
-      </button>
+        <button className="btn-secondary btn-sm" onClick={onOpenLogin}>
+          Registrarse
+        </button>
+      </div>
     </div>
   );
 }

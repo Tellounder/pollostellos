@@ -1,5 +1,10 @@
 import { useEffect, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { loadMotionModule, preloadMotionModule } from "utils/lazyMotion";
+import type { MotionModule } from "utils/lazyMotion";
+
+if (typeof window !== "undefined") {
+  preloadMotionModule();
+}
 
 const slogans = [
   "🍗 El sabor que conquista",
@@ -18,6 +23,7 @@ const variants = {
 
 export default function FooterSlogans() {
   const [index, setIndex] = useState(0);
+  const [motionLib, setMotionLib] = useState<Pick<MotionModule, "AnimatePresence" | "motion"> | null>(null);
 
   useEffect(() => {
     const id = setInterval(() => {
@@ -25,6 +31,34 @@ export default function FooterSlogans() {
     }, 3200);
     return () => clearInterval(id);
   }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    loadMotionModule()
+      .then((mod) => {
+        if (mounted) {
+          setMotionLib({ AnimatePresence: mod.AnimatePresence, motion: mod.motion });
+        }
+      })
+      .catch((error) => {
+        console.error("No se pudo cargar framer-motion", error);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  if (!motionLib) {
+    return (
+      <footer className="footer-slogans" role="contentinfo">
+        <div className="footer-slogans__inner" aria-live="polite">
+          <span className="footer-slogans__text">{slogans[index]}</span>
+        </div>
+      </footer>
+    );
+  }
+
+  const { AnimatePresence, motion } = motionLib;
 
   return (
     <footer className="footer-slogans" role="contentinfo">

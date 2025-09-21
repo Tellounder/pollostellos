@@ -17,11 +17,7 @@ export const UpsellModal: React.FC<Props> = ({ open, countdown, item, onAccept, 
   if (!open || !item) return null;
 
   const label = isExtra(item) ? item.label : item.name;
-  const priceLabel = new Intl.NumberFormat("es-AR", {
-    style: "currency",
-    currency: "ARS",
-    minimumFractionDigits: 0,
-  }).format(item.price);
+  
 
   return (
     <div className="modal" role="dialog" aria-modal="true" aria-label={`Promo ${label}`}>
@@ -29,22 +25,20 @@ export const UpsellModal: React.FC<Props> = ({ open, countdown, item, onAccept, 
         <div className="spinner spin" aria-hidden>
           🍗
         </div>
-        <h3 style={{ fontSize: 24, marginTop: 4 }}>Promo por tiempo limitado</h3>
+        <h3 style={{ fontSize: 24, marginTop: 4 }}>PROMO POR TIEMPO LIMITADO</h3>
         <h4 style={{ margin: 6, fontSize: 18, color: "var(--text)" }}>
-          Sumá {label} al mismo precio
+          Sumálo ¡Al mismo precio!
         </h4>
-        <p className="lead" style={{ fontSize: 16, fontWeight: 700, color: "var(--accent)" }}>
-          Mantiene el valor en {priceLabel}
-        </p>
+       
         <p className="small">
-          Mejorá la experiencia: pollo deshuesado listo para servir.
+          Mejorá experiencia a tu paladar: Pollito deshuesado listo para servir.
         </p>
         <div className="cta-row">
           <button className="btn-ghost" aria-label="No aceptar" onClick={onCancel}>
             No, gracias
           </button>
           <button className="btn-primary" aria-label="Aceptar promoción" onClick={onAccept}>
-            Agregar deshuesado
+            Sin Hueso
           </button>
         </div>
         <div className="countdown">Se cierra en {countdown}s…</div>

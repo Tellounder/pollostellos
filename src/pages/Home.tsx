@@ -31,14 +31,15 @@ export function Home() {
   };
 
   return (
-    <div
-      className="grid"
-      style={{ maxWidth: 560, margin: "24px auto", justifyItems: "center" }}
-    >
-      <div className="card center auth-card">
-        <h1>🍗 NUEVO PEDIDO </h1>
-        <p className="small">Alta gastronomía</p>
-        <div className="space"></div>
+    <div className="grid" style={{ maxWidth: 560, margin: "24px auto", justifyItems: "center" }}>
+      <div className="card center auth-card home-hero">
+        <h1 className="home-hero__title">
+          <span className="home-hero__icon" aria-hidden>
+            🍗
+          </span>
+          <span>NUEVO PEDIDO</span>
+        </h1>
+        <p className="small home-hero__subtitle">Alta gastronomía sin espera</p>
 
         <AccessActions
           user={user}

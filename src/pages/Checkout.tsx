@@ -1,7 +1,7 @@
 /**
  * Datos de entrega: formulario + resumen antes de enviar pedido vía WhatsApp.
  */
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCart } from "hooks/useCart";
 import { useAuth } from "hooks/useAuth";
@@ -42,25 +42,78 @@ const Checkout: React.FC = () => {
   const navigate = useNavigate();
   const [form, setForm] = useState<OrderForm>(initialForm);
   const promoTriggeredRef = useRef(false);
+  const pendingFocusRef = useRef<null | (HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement)>(null);
+  const wasOpenRef = useRef(open);
+  const formTopRef = useRef<HTMLDivElement | null>(null);
+  const showTimeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
     promoTriggeredRef.current = false;
+    pendingFocusRef.current = null;
+    if (showTimeoutRef.current) {
+      window.clearTimeout(showTimeoutRef.current);
+      showTimeoutRef.current = null;
+    }
     reset();
   }, [reset]);
+
+  const resumePendingFocus = useCallback(() => {
+    const element = pendingFocusRef.current;
+    if (!element) {
+      return;
+    }
+    pendingFocusRef.current = null;
+
+    window.setTimeout(() => {
+      if (!element.isConnected) {
+        return;
+      }
+      try {
+        element.focus({ preventScroll: true });
+      } catch (error) {
+        element.focus();
+      }
+    }, 120);
+  }, []);
 
   const handleUpsellAccept = () => {
     if (promoExtra) {
       addItem(promoExtra);
     }
     accept();
+    resumePendingFocus();
   };
 
-  const handleFormFocus = () => {
-    if (!promoExtra || promoTriggeredRef.current || accepted) {
+  const handleUpsellCancel = () => {
+    cancel();
+    resumePendingFocus();
+  };
+
+  const handleFormFocus = (
+    event: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) => {
+    if (!promoExtra || promoTriggeredRef.current || accepted || open) {
       return;
     }
     promoTriggeredRef.current = true;
-    show(promoExtra);
+    pendingFocusRef.current = event.currentTarget;
+    if (typeof event.currentTarget.blur === "function") {
+      event.currentTarget.blur();
+    }
+    const rect = formTopRef.current?.getBoundingClientRect();
+    if (rect) {
+      const target = Math.max(0, rect.top + window.scrollY - 32);
+      window.scrollTo({ top: target, behavior: "smooth" });
+    }
+
+    if (showTimeoutRef.current) {
+      window.clearTimeout(showTimeoutRef.current);
+    }
+
+    showTimeoutRef.current = window.setTimeout(() => {
+      show(promoExtra);
+      showTimeoutRef.current = null;
+    }, rect ? 160 : 60);
   };
 
   const handleChange = <K extends keyof OrderForm>(field: K, value: OrderForm[K]) => {
@@ -112,6 +165,13 @@ const Checkout: React.FC = () => {
     navigate("/thanks");
   };
 
+  useEffect(() => {
+    if (wasOpenRef.current && !open) {
+      resumePendingFocus();
+    }
+    wasOpenRef.current = open;
+  }, [open, resumePendingFocus]);
+
   const isFormValid = useMemo(() => {
     if (items.length === 0) return false;
     const hasName = form.customerName.trim().length > 0;
@@ -121,8 +181,17 @@ const Checkout: React.FC = () => {
     return hasName && hasAddress && hasEmail && hasPayment;
   }, [form, items.length]);
 
+  useEffect(
+    () => () => {
+      if (showTimeoutRef.current) {
+        window.clearTimeout(showTimeoutRef.current);
+      }
+    },
+    []
+  );
+
   return (
-    <div className="container">
+    <div ref={formTopRef} className="container">
       <h2>Datos de entrega</h2>
       <div className="card" style={{ marginBottom: 20 }}>
         <div className="grid" style={{ gap: 16 }}>
@@ -234,7 +303,7 @@ const Checkout: React.FC = () => {
         countdown={countdown}
         item={item}
         onAccept={handleUpsellAccept}
-        onCancel={cancel}
+        onCancel={handleUpsellCancel}
       />
     </div>
   );

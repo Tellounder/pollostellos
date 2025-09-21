@@ -23,39 +23,43 @@ export const ComboCard: React.FC<Props> = ({ combo }) => {
   };
 
   return (
-    <div className="combo-card">
-      <h3>{combo.name}</h3>
-      <p>{combo.description}</p>
+    <article className="combo-card" aria-label={combo.name}>
+      <header className="combo-card__header">
+        <h3 className="combo-card__title">{combo.name}</h3>
+      </header>
+      <p className="combo-card__description">{combo.description}</p>
       {requiresSide && (
-        <>
-          <div className="small">Elegí tu guarnición</div>
-          <div
-            className="chip-group"
-            role="group"
-            aria-label={`Guarnición para ${combo.name}`}
-          >
-            {sideOptions.map((option) => (
-              <button
-                type="button"
-                key={option}
-                className={`chip ${selectedSide === option ? "active" : ""}`}
-                onClick={() => setSelectedSide(option)}
-              >
-                {option}
-              </button>
-            ))}
-          </div>
-        </>
+        <div className="combo-card__options">
+          <label className="combo-card__picker">
+            <span className="combo-card__hint">Elegí tu guarnición</span>
+            <select
+              value={selectedSide}
+              onChange={(event) => setSelectedSide(event.target.value)}
+              aria-label={`Guarnición para ${combo.name}`}
+            >
+              <option value="" disabled>
+                Seleccioná una opción
+              </option>
+              {sideOptions.map((option) => (
+                <option value={option} key={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
       )}
-      <div className="price">{money(combo.price)}</div>
-      <button
-        className="btn-primary"
-        onClick={handleAdd}
-        disabled={!canAdd}
-        aria-disabled={!canAdd}
-      >
-        Agregar
-      </button>
-    </div>
+      <footer className="combo-card__footer">
+        <span className="combo-card__price">{money(combo.price)}</span>
+        <button
+          className="btn-primary btn-sm combo-card__button"
+          onClick={handleAdd}
+          disabled={!canAdd}
+          aria-disabled={!canAdd}
+        >
+          Agregar
+        </button>
+      </footer>
+    </article>
   );
 };

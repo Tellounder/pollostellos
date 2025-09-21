@@ -10,23 +10,25 @@ const UserSection: React.FC = () => {
 
   if (!user) {
     return (
-      <div className="card center">
-        <p>¡Bienvenido, Invitado! Continúa con tu pedido.</p>
+      <div className="card menu-intro menu-intro--guest">
+        <h2 className="menu-intro__title">Armá tu pedido</h2>
+        <p className="menu-intro__text small">
+          Elegí un combo irresistible y sumá extras si querés darle un plus.
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="card">
-      <h3>¡Qué bueno verte, {user.displayName || 'crack'}!</h3>
-      <p className="small">Aquí tienes algunas opciones:</p>
-      <div className="grid grid-3" style={{ marginTop: '1rem' }}>
-        <button className="btn-secondary">Mis pedidos</button>
-        <button className="btn-secondary">Descuentos</button>
-        <button className="btn-secondary">Mi perfil</button>
+    <div className="card menu-intro menu-intro--user">
+      <div className="menu-intro__avatar" aria-hidden />
+      <div className="menu-intro__content">
+        <h2 className="menu-intro__title">¡Hola, {user.displayName || "crack"}!</h2>
+        <p className="menu-intro__text small">
+          Guardamos tus datos para acelerar el pedido. Próximamente vas a poder elegir tu avatar.
+        </p>
       </div>
-      <div className="space" />
-      <button className="btn-ghost" onClick={logout}>
+      <button className="btn-ghost btn-sm menu-intro__logout" onClick={logout}>
         Cerrar sesión
       </button>
     </div>
@@ -39,8 +41,7 @@ export function Menu() {
   const canCheckout = items.length > 0;
 
   return (
-    <section className="grid" aria-label="Selección de combos">
-
+    <section className="grid menu-view" aria-label="Selección de combos">
       <UserSection />
       <div className="combos-grid">
         {COMBOS.map((c) => (

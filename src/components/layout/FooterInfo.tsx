@@ -1,5 +1,10 @@
-import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useEffect, useState } from "react";
+import { loadMotionModule, preloadMotionModule } from "utils/lazyMotion";
+import type { MotionModule } from "utils/lazyMotion";
+
+if (typeof window !== "undefined") {
+  preloadMotionModule();
+}
 
 type FaqItem = {
   id: string;
@@ -28,13 +33,26 @@ const FAQS: FaqItem[] = [
   },
 ];
 
+type MotionBasics = Pick<MotionModule, "AnimatePresence" | "motion">;
+
 const accordionVariants = {
   initial: { height: 0, opacity: 0 },
   animate: { height: "auto", opacity: 1 },
   exit: { height: 0, opacity: 0 },
 };
 
-function FaqBlock({ activeId, onToggle }: { activeId: string | null; onToggle: (id: string) => void }) {
+function FaqBlock({
+  activeId,
+  onToggle,
+  motionLib,
+}: {
+  activeId: string | null;
+  onToggle: (id: string) => void;
+  motionLib?: MotionBasics | null;
+}) {
+  const Animate = motionLib?.AnimatePresence;
+  const MotionDiv = motionLib?.motion.div;
+
   return (
     <div className="footer-faq" role="list">
       {FAQS.map(({ id, question, answer }) => {
@@ -54,22 +72,34 @@ function FaqBlock({ activeId, onToggle }: { activeId: string | null; onToggle: (
                 {isOpen ? "➖" : "➕"}
               </span>
             </button>
-            <AnimatePresence initial={false}>
-              {isOpen && (
-                <motion.div
-                  key={id}
+            {Animate && MotionDiv ? (
+              <Animate initial={false}>
+                {isOpen && (
+                  <MotionDiv
+                    key={id}
+                    id={contentId}
+                    className={`footer-faq__content${isOpen ? " is-open" : ""}`}
+                    variants={accordionVariants}
+                    initial="initial"
+                    animate="animate"
+                    exit="exit"
+                    transition={{ duration: 0.2, ease: "easeOut" }}
+                  >
+                    <p>{answer}</p>
+                  </MotionDiv>
+                )}
+              </Animate>
+            ) : (
+              isOpen && (
+                <div
                   id={contentId}
-                  className="footer-faq__content"
-                  variants={accordionVariants}
-                  initial="initial"
-                  animate="animate"
-                  exit="exit"
-                  transition={{ duration: 0.24, ease: "easeOut" }}
+                  className={`footer-faq__content${isOpen ? " is-open" : ""}`}
+                  aria-hidden={!isOpen}
                 >
                   <p>{answer}</p>
-                </motion.div>
-              )}
-            </AnimatePresence>
+                </div>
+              )
+            )}
           </article>
         );
       })}
@@ -122,12 +152,34 @@ function LegalBlock() {
 
 function FooterInfo(): JSX.Element {
   const [openId, setOpenId] = useState<string | null>(FAQS[0].id);
+  const [motionLib, setMotionLib] = useState<MotionBasics | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    loadMotionModule()
+      .then((mod) => {
+        if (mounted) {
+          setMotionLib({ AnimatePresence: mod.AnimatePresence, motion: mod.motion });
+        }
+      })
+      .catch((error) => {
+        console.error("No se pudo cargar framer-motion", error);
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   return (
     <footer className="footer-info footer-info--faq" role="contentinfo">
       <div className="footer-info__inner">
         <h2 className="footer-info__title">¿Necesitás ayuda rápida?</h2>
-        <FaqBlock activeId={openId} onToggle={(id) => setOpenId(id || null)} />
+        <FaqBlock
+          activeId={openId}
+          onToggle={(id) => setOpenId(id || null)}
+          motionLib={motionLib}
+        />
         <TrustBlock />
         <LegalBlock />
       </div>

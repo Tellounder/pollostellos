@@ -4,44 +4,95 @@
 import { useCart } from "hooks/useCart";
 import { money } from "utils/format";
 
-export const CartDrawer: React.FC<{open:boolean; onClose:()=>void; onGoCheckout:()=>void}> = ({open,onClose,onGoCheckout})=>{
-  const {items,setQty,removeItem,totalLabel,clearCart} = useCart();
+type CartDrawerProps = {
+  open: boolean;
+  onClose: () => void;
+  onGoCheckout: () => void;
+};
+
+export const CartDrawer: React.FC<CartDrawerProps> = ({ open, onClose, onGoCheckout }) => {
+  const { items, setQty, removeItem, totalLabel, clearCart } = useCart();
+
   return (
-    <aside className={`cart-drawer ${open ? "open":""}`} role="dialog" aria-modal="true" aria-label="Carrito">
-      <div className="inner">
-        <div className="row" style={{justifyContent:"space-between"}}>
-          <h3>Tu carrito</h3>
-          <button className="btn-ghost" onClick={onClose} aria-label="Cerrar carrito">Cerrar</button>
+    <aside
+      className={`cart-drawer ${open ? "open" : ""}`}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Carrito"
+    >
+      <div className="cart-drawer__inner">
+        <header className="cart-drawer__header">
+          <h3 className="cart-drawer__title">Tu carrito</h3>
+          <button className="btn-ghost btn-sm" onClick={onClose} aria-label="Cerrar carrito">
+            Cerrar
+          </button>
+        </header>
+
+        <div className="cart-drawer__body">
+          {items.length === 0 ? (
+            <p className="small cart-drawer__empty">Vacío por ahora.</p>
+          ) : (
+            items.map((item) => {
+              const label = "name" in item ? item.name : item.label;
+              return (
+                <article key={item.key} className="cart-line cart-line--drawer">
+                  <div className="cart-line__info">
+                    <strong className="cart-line__name">{label}</strong>
+                    {item.side && <div className="cart-line__meta small">Guarnición: {item.side}</div>}
+                    <div className="cart-line__meta small">{money(item.price)} c/u</div>
+                  </div>
+                  <div className="cart-line__actions">
+                    <div className="stepper" role="group" aria-label={`Cantidad ${label}`}>
+                      <button
+                        className="btn-ghost btn-sm"
+                        aria-label="Quitar"
+                        onClick={() => setQty(item.key, item.qty - 1)}
+                      >
+                        -
+                      </button>
+                      <div className="count" aria-live="polite">
+                        {item.qty}
+                      </div>
+                      <button
+                        className="btn-ghost btn-sm"
+                        aria-label="Agregar"
+                        onClick={() => setQty(item.key, item.qty + 1)}
+                      >
+                        +
+                      </button>
+                    </div>
+                    <button
+                      className="btn-ghost btn-sm cart-line__remove"
+                      onClick={() => removeItem(item.key)}
+                      aria-label={`Eliminar ${label}`}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </article>
+              );
+            })
+          )}
         </div>
-        <div style={{flex:1, overflow:"auto", marginTop:10}}>
-          {items.length===0 ? <p className="small">Vacío por ahora.</p> : items.map(i=>(
-            <div key={i.key} className="cart-line">
-              <div style={{maxWidth:"60%"}}>
-                <strong>{'name' in i ? i.name : i.label}</strong>
-                {i.side && <div className="small">Guarnición: {i.side}</div>}
-                <div className="small">{money(i.price)} c/u</div>
-              </div>
-              <div className="row">
-                <div className="stepper" role="group" aria-label={`Cantidad ${'name' in i ? i.name : i.label}`}>
-                  <button className="btn-ghost" aria-label="Quitar" onClick={()=> setQty(i.key, i.qty-1)}>-</button>
-                  <div className="count" aria-live="polite">{i.qty}</div>
-                  <button className="btn-ghost" aria-label="Agregar" onClick={()=> setQty(i.key, i.qty+1)}>+</button>
-                </div>
-                <button className="btn-ghost" onClick={()=> removeItem(i.key)} aria-label={`Eliminar ${'name' in i ? i.name : i.label}`}>
-                  ✕
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-        <div className="row" style={{justifyContent:"space-between"}}>
-          <strong>Total</strong><strong className="price">{totalLabel}</strong>
-        </div>
-        <div className="space"></div>
-        <div className="row" style={{justifyContent:"space-between"}}>
-          <button className="btn-ghost" onClick={clearCart}>Vaciar</button>
-          <button className="btn-primary" onClick={onGoCheckout} disabled={items.length===0}>Ir a datos</button>
-        </div>
+
+        <footer className="cart-drawer__footer">
+          <div className="cart-drawer__total">
+            <span>Total</span>
+            <strong className="price">{totalLabel}</strong>
+          </div>
+          <div className="cart-drawer__cta">
+            <button className="btn-ghost btn-sm" onClick={clearCart}>
+              Vaciar
+            </button>
+            <button
+              className="btn-primary btn-sm"
+              onClick={onGoCheckout}
+              disabled={items.length === 0}
+            >
+              Ir a datos
+            </button>
+          </div>
+        </footer>
       </div>
     </aside>
   );
