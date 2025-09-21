@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 220">
+  <defs>
+    <linearGradient id="orangeStrokeDark" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#F4A261" />
+      <stop offset="100%" stop-color="#FAF3E0" />
+    </linearGradient>
+  </defs>
+  <rect width="100%" height="100%" fill="transparent" />
+  <text x="50%" y="28%" text-anchor="middle" dominant-baseline="middle"
+        font-family="'Playfair Display', 'Times New Roman', serif"
+        font-size="64" font-weight="900"
+        fill="#F4A261"
+        stroke="url(#orangeStrokeDark)" stroke-width="2" stroke-linejoin="round"
+        paint-order="stroke fill" letter-spacing="8.5">
+    POLLOS
+  </text>
+  <text x="50%" y="70%" text-anchor="middle" dominant-baseline="middle"
+        font-family="'Playfair Display', 'Times New Roman', serif"
+        font-size="130" font-weight="900"
+        fill="#F4A261"
+        stroke="url(#orangeStrokeDark)" stroke-width="0" stroke-linejoin="round"
+        paint-order="stroke fill">
+    TELLO'S
+  </text>
+</svg>

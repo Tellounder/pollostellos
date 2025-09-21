@@ -1,0 +1,98 @@
+:root {
+  font-family: var(--font-sans, 'Poppins', 'Segoe UI', sans-serif);
+  line-height: 1.5;
+  font-weight: 400;
+  color: var(--text-base, #333333);
+  background-color: var(--bg, #fffaf5);
+  color-scheme: light dark;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  font-weight: 600;
+  color: var(--primary, #c8102e);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+a:hover {
+  color: var(--primary-dark, #a30d23);
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--bg, #fffaf5);
+  color: var(--text-base, #333333);
+}
+
+h1 {
+  font-family: var(--font-serif, 'Playfair Display', serif);
+  font-size: clamp(2.4rem, 4vw, 3.2rem);
+  line-height: 1.1;
+  color: var(--primary, #c8102e);
+  margin: 0;
+}
+
+button {
+  border-radius: var(--btn-radius, 14px);
+  border: 1px solid var(--primary, #c8102e);
+  padding: 0.75rem 1.25rem;
+  font-size: 1rem;
+  font-weight: 600;
+  font-family: var(--font-sans, 'Poppins', sans-serif);
+  background-color: var(--primary, #c8102e);
+  color: var(--btn-primary-text, #ffffff);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+button:hover {
+  background-color: var(--primary-dark, #a30d23);
+  border-color: var(--primary-dark, #a30d23);
+}
+
+button:focus,
+button:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring, 0 0 0 3px rgba(246, 195, 67, 0.55));
+  outline-offset: 2px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color: var(--text-base, #f2f2f2);
+    background-color: var(--bg, #121212);
+  }
+
+  body {
+    background-color: var(--bg, #121212);
+    color: var(--text-base, #f2f2f2);
+  }
+
+  a {
+    color: var(--accent, #ff4d4d);
+  }
+
+  a:hover {
+    color: var(--accent-hover, #f1c40f);
+  }
+
+  button {
+    background-color: var(--primary, #ff9f43);
+    border-color: var(--primary, #ff9f43);
+    color: var(--btn-primary-text, #121212);
+  }
+
+  button:hover {
+    background-color: var(--primary-dark, #ff7a1a);
+    border-color: var(--primary-dark, #ff7a1a);
+  }
+}

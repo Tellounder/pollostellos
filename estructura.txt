@@ -1,0 +1,41 @@
+.
+├── eslint.config.js
+├── estructura.txt
+├── .gitignore
+├── index.html
+├── package.json
+├── package-lock.json
+├── public
+│   ├── favicon.svg
+│   └── vite.svg
+├── README.md
+├── src
+│   ├── App.css
+│   ├── App.tsx
+│   ├── assets
+│   │   └── react.svg
+│   ├── components
+│   │   ├── CartDrawer.tsx
+│   │   ├── ComboCard.tsx
+│   │   ├── ExtrasList.tsx
+│   │   ├── Header.tsx
+│   │   ├── Ticker.tsx
+│   │   └── UpsellModal.tsx
+│   ├── constants.ts
+│   ├── hooks
+│   │   ├── useCart.tsx
+│   │   ├── useLocalStorage.ts
+│   │   ├── useTicker.ts
+│   │   └── useUpsell.ts
+│   ├── index.css
+│   ├── main.tsx
+│   ├── styles.css
+│   ├── utils
+│   │   └── format.ts
+│   └── vite-env.d.ts
+├── tsconfig.app.json
+├── tsconfig.json
+├── tsconfig.node.json
+└── vite.config.ts
+
+7 directories, 32 files
