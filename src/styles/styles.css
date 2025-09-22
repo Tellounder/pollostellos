@@ -1129,8 +1129,8 @@ button svg {
   position: absolute;
   inset: 0;
   z-index: 0;
-  background: color-mix(in srgb, var(--overlay) 78%, rgba(0, 0, 0, 0.35));
-  backdrop-filter: blur(3px);
+  background: rgba(8, 4, 4, 0.68);
+  backdrop-filter: blur(6px);
   pointer-events: none;
 }
 
@@ -1155,10 +1155,209 @@ button svg {
   margin: 10px 0 8px;
 }
 
-.modal .lead {
+.modal__lead {
   font-size: 0.95rem;
   color: var(--text-muted);
   margin-bottom: 6px;
+}
+
+.auth-modal {
+  background: color-mix(in srgb, var(--surface) 94%, rgba(255, 255, 255, 0.9));
+  padding: clamp(26px, 5vw, 36px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  box-shadow: 0 28px 52px rgba(200, 16, 46, 0.18);
+}
+
+.dark .auth-modal,
+[data-theme="dark"] .auth-modal {
+  background: color-mix(in srgb, #1c1211 88%, rgba(255, 159, 67, 0.12));
+  border: 1px solid color-mix(in srgb, rgba(255, 159, 67, 0.5) 55%, transparent);
+  color: var(--text-base);
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.55);
+}
+
+.dark .auth-modal h3,
+[data-theme="dark"] .auth-modal h3 {
+  color: var(--accent-hover);
+}
+
+.dark .modal__lead,
+[data-theme="dark"] .modal__lead {
+  color: color-mix(in srgb, var(--text-base) 82%, rgba(255, 159, 67, 0.28));
+}
+
+.modal__close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1px solid color-mix(in srgb, var(--border) 65%, transparent);
+  background: color-mix(in srgb, var(--surface) 82%, transparent);
+  color: var(--text-base);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.18s ease, background 0.18s ease;
+}
+
+.modal__close:hover {
+  transform: scale(1.05);
+  background: color-mix(in srgb, var(--primary) 15%, transparent);
+}
+
+.dark .modal__close,
+[data-theme="dark"] .modal__close {
+  border: 1px solid color-mix(in srgb, rgba(255, 255, 255, 0.35) 65%, transparent);
+  background: color-mix(in srgb, rgba(255, 255, 255, 0.12) 65%, transparent);
+  color: var(--text-base);
+}
+
+.dark .modal__close:hover,
+[data-theme="dark"] .modal__close:hover {
+  background: color-mix(in srgb, var(--accent-hover) 25%, transparent);
+}
+
+.dark .modal__close,
+[data-theme="dark"] .modal__close {
+  border: 1px solid color-mix(in srgb, rgba(255, 255, 255, 0.35) 65%, transparent);
+  background: color-mix(in srgb, rgba(255, 255, 255, 0.12) 65%, transparent);
+  color: var(--text-base);
+}
+
+.dark .modal__close:hover,
+[data-theme="dark"] .modal__close:hover {
+  background: color-mix(in srgb, var(--accent-hover) 25%, transparent);
+}
+
+.btn-google {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 50px;
+  border-radius: var(--btn-radius);
+  border: 1px solid color-mix(in srgb, #dadce0 95%, transparent);
+  background: #ffffff;
+  color: #1a1a1a;
+  font-weight: 600;
+  font-size: 0.95rem;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.btn-google:disabled {
+  opacity: 0.7;
+  cursor: progress;
+  transform: none;
+}
+
+.btn-google:not(:disabled):hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--primary) 25%, transparent);
+  box-shadow: 0 16px 28px rgba(200, 16, 46, 0.18);
+}
+
+.btn-google svg {
+  width: 1.2rem;
+  height: 1.2rem;
+}
+
+.dark .btn-google,
+[data-theme="dark"] .btn-google {
+  background: color-mix(in srgb, rgba(255, 255, 255, 0.18) 70%, transparent);
+  color: var(--text-base);
+  border-color: color-mix(in srgb, rgba(255, 255, 255, 0.4) 70%, transparent);
+}
+
+.dark .btn-google:not(:disabled):hover,
+[data-theme="dark"] .btn-google:not(:disabled):hover {
+  border-color: color-mix(in srgb, var(--accent-hover) 35%, transparent);
+  box-shadow: 0 18px 32px rgba(0, 0, 0, 0.5);
+}
+
+.dark .btn-google svg,
+[data-theme="dark"] .btn-google svg {
+  color: var(--accent-hover);
+}
+
+.dark .btn-google,
+[data-theme="dark"] .btn-google {
+  background: color-mix(in srgb, rgba(255, 255, 255, 0.15) 65%, transparent);
+  color: var(--text-base);
+  border-color: color-mix(in srgb, rgba(255, 255, 255, 0.35) 65%, transparent);
+}
+
+.dark .btn-google:not(:disabled):hover,
+[data-theme="dark"] .btn-google:not(:disabled):hover {
+  border-color: color-mix(in srgb, var(--accent-hover) 35%, transparent);
+  box-shadow: 0 18px 30px rgba(0, 0, 0, 0.45);
+}
+
+.dark .btn-google svg,
+[data-theme="dark"] .btn-google svg {
+  color: var(--accent-hover);
+}
+
+.modal__link {
+  background: none;
+  border: none;
+  color: var(--primary);
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-decoration: underline;
+  cursor: pointer;
+  transition: color 0.18s ease;
+}
+
+.modal__link:hover {
+  color: var(--primary-dark);
+}
+
+.dark .modal__link,
+[data-theme="dark"] .modal__link {
+  color: var(--accent-hover);
+}
+
+.dark .modal__link:hover,
+[data-theme="dark"] .modal__link:hover {
+  color: color-mix(in srgb, var(--accent-hover) 85%, var(--text-base) 15%);
+}
+
+.dark .modal__link,
+[data-theme="dark"] .modal__link {
+  color: var(--accent-hover);
+}
+
+.dark .modal__link:hover,
+[data-theme="dark"] .modal__link:hover {
+  color: color-mix(in srgb, var(--accent-hover) 85%, var(--text-base) 15%);
+}
+
+.modal__secondary {
+  width: 100%;
+  margin-top: 4px;
+}
+
+.modal__error {
+  width: 100%;
+  background: color-mix(in srgb, var(--primary) 18%, rgba(255, 255, 255, 0.12));
+  border: 1px solid color-mix(in srgb, var(--primary) 35%, transparent);
+  border-radius: var(--btn-radius);
+  padding: 10px 14px;
+  font-size: 0.85rem;
+  color: var(--primary);
+  text-align: left;
+}
+
+.dark .modal__error,
+[data-theme="dark"] .modal__error {
+  background: color-mix(in srgb, var(--primary) 25%, transparent);
+  color: var(--text-inverse);
 }
 
 .modal .spin {
