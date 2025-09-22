@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { loadMotionModule, preloadMotionModule } from "utils/lazyMotion";
 import type { MotionModule } from "utils/lazyMotion";
+import { FaInstagram, FaTiktok } from "react-icons/fa6";
+import { SiMercadopago } from "react-icons/si";
 
 if (typeof window !== "undefined") {
   preloadMotionModule();
@@ -23,7 +25,7 @@ const FAQS: FaqItem[] = [
     id: "entrega",
     question: "¿Dónde entregan?",
     answer:
-      "Repartimos en Avellaneda, Piñeyro, Dock Sud, Sarandí y zonas cercanas. Consultanos por WhatsApp si estás a unos minutos extra y lo coordinamos.",
+      "Nos movemos en Ciudadela, Versalles, Villa Real, Villa Raffo, Caseros y José Ingenieros. Si quedás a unos minutos extra, escribinos por WhatsApp y lo coordinamos.",
   },
   {
     id: "pagos",
@@ -112,15 +114,7 @@ function TrustBlock() {
     <div className="footer-trust" aria-label="Confianza y medios de pago">
       <p className="footer-trust__headline">Pagos 100% seguros con Mercado Pago.</p>
       <div className="footer-trust__icons" aria-hidden>
-        <span role="img" aria-label="Efectivo">
-          💵
-        </span>
-        <span role="img" aria-label="Tarjeta">
-          💳
-        </span>
-        <span role="img" aria-label="Mercado Pago">
-          🅿️
-        </span>
+        <SiMercadopago />
       </div>
       <p className="footer-trust__eta">Tiempo promedio de entrega: 30–45 min.</p>
     </div>
@@ -139,11 +133,23 @@ function LegalBlock() {
         <a href="#contacto">Contacto</a>
       </nav>
       <div className="footer-legal__social" aria-label="Redes sociales">
-        <a href="https://instagram.com" target="_blank" rel="noreferrer" aria-label="Instagram Pollos Tello’s">
-          📸
+        <a
+          className="footer-legal__icon"
+          href="https://instagram.com"
+          target="_blank"
+          rel="noreferrer"
+          aria-label="Instagram Pollos Tello’s"
+        >
+          <FaInstagram aria-hidden />
         </a>
-        <a href="https://www.tiktok.com" target="_blank" rel="noreferrer" aria-label="TikTok Pollos Tello’s">
-          🎵
+        <a
+          className="footer-legal__icon"
+          href="https://www.tiktok.com"
+          target="_blank"
+          rel="noreferrer"
+          aria-label="TikTok Pollos Tello’s"
+        >
+          <FaTiktok aria-hidden />
         </a>
       </div>
     </div>

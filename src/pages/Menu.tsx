@@ -1,12 +1,32 @@
+import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCart } from "hooks/useCart";
 import { useAuth } from "hooks/useAuth";
 import { COMBOS } from "utils/constants";
 import { ComboCard } from "components/products/ComboCard";
 import { ExtrasList } from "components/products/ExtrasList";
+import Avatar1 from "../assets/avatar/av1.svg";
+import Avatar2 from "../assets/avatar/av2.svg";
+import Avatar3 from "../assets/avatar/av3.svg";
+import Avatar4 from "../assets/avatar/av4.svg";
+import Avatar5 from "../assets/avatar/av5.svg";
+import Avatar6 from "../assets/avatar/av6.svg";
+
+const AVATARS = [Avatar1, Avatar2, Avatar3, Avatar4, Avatar5, Avatar6];
 
 const UserSection: React.FC = () => {
   const { user, logout } = useAuth();
+  const avatarSrc = useMemo(() => {
+    if (!user || typeof window === "undefined") return null;
+    const sessionKey = `pt-avatar-${user.uid || user.email || "guest"}`;
+    const stored = window.sessionStorage.getItem(sessionKey);
+    let index = stored ? Number(stored) : Number.NaN;
+    if (!Number.isInteger(index) || index < 0 || index >= AVATARS.length) {
+      index = Math.floor(Math.random() * AVATARS.length);
+      window.sessionStorage.setItem(sessionKey, String(index));
+    }
+    return AVATARS[index];
+  }, [user]);
 
   if (!user) {
     return (
@@ -21,7 +41,11 @@ const UserSection: React.FC = () => {
 
   return (
     <div className="card menu-intro menu-intro--user">
-      <div className="menu-intro__avatar" aria-hidden />
+      <div
+        className={`menu-intro__avatar${avatarSrc ? " menu-intro__avatar--img" : ""}`}
+        aria-hidden
+        style={avatarSrc ? { backgroundImage: `url(${avatarSrc})` } : undefined}
+      />
       <div className="menu-intro__content">
         <h2 className="menu-intro__title">¡Hola, {user.displayName || "crack"}!</h2>
         <p className="menu-intro__text small">

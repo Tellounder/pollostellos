@@ -51,8 +51,29 @@ export function Home() {
       </div>
       <div className="card center auth-card" style={{ padding: "24px 20px" }}>
         <h2>Zona de reparto</h2>
-        <p className="small">El sabor que conquista 🍗</p>
-        <div className="space"></div>
+        <div className="zone-marquee" aria-label="Zonas disponibles">
+          <div className="zone-marquee__track" aria-hidden>
+            <span className="zone-marquee__item">CIUDADELA</span>
+            <span className="zone-marquee__bullet">•</span>
+            <span className="zone-marquee__item">VILLA REAL</span>
+            <span className="zone-marquee__bullet">•</span>
+            <span className="zone-marquee__item">VERSALLES</span>
+            <span className="zone-marquee__bullet">•</span>
+            <span className="zone-marquee__item">VILLA RAFFO</span>
+            <span className="zone-marquee__bullet">•</span>
+            <span className="zone-marquee__item">CASEROS</span>
+            <span className="zone-marquee__bullet">•</span>
+            <span className="zone-marquee__item">CIUDADELA</span>
+            <span className="zone-marquee__bullet">•</span>
+            <span className="zone-marquee__item">VILLA REAL</span>
+            <span className="zone-marquee__bullet">•</span>
+            <span className="zone-marquee__item">VERSALLES</span>
+            <span className="zone-marquee__bullet">•</span>
+            <span className="zone-marquee__item">VILLA RAFFO</span>
+            <span className="zone-marquee__bullet">•</span>
+            <span className="zone-marquee__item">CASEROS</span>
+          </div>
+        </div>
         <div className="map-container" aria-label="Cobertura de reparto">
           <iframe
             title="Zona de reparto Pollos Tello's"

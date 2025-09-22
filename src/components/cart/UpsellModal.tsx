@@ -27,11 +27,11 @@ export const UpsellModal: React.FC<Props> = ({ open, countdown, item, onAccept, 
         </div>
         <h3 style={{ fontSize: 24, marginTop: 4 }}>PROMO POR TIEMPO LIMITADO</h3>
         <h4 style={{ margin: 6, fontSize: 18, color: "var(--text)" }}>
-          Sumálo ¡Al mismo precio!
+          Sumálo GRATIS
         </h4>
        
         <p className="small">
-          Mejorá experiencia a tu paladar: Pollito deshuesado listo para servir.
+          Experiencia para tu paladar: Pollito deshuesado listo para servir.
         </p>
         <div className="cta-row">
           <button className="btn-ghost" aria-label="No aceptar" onClick={onCancel}>
