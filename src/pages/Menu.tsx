@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCart } from "hooks/useCart";
 import { useAuth } from "hooks/useAuth";
@@ -16,17 +16,45 @@ const AVATARS = [Avatar1, Avatar2, Avatar3, Avatar4, Avatar5, Avatar6];
 
 const UserSection: React.FC = () => {
   const { user, logout } = useAuth();
-  const avatarSrc = useMemo(() => {
-    if (!user || typeof window === "undefined") return null;
-    const sessionKey = `pt-avatar-${user.uid || user.email || "guest"}`;
-    const stored = window.sessionStorage.getItem(sessionKey);
-    let index = stored ? Number(stored) : Number.NaN;
-    if (!Number.isInteger(index) || index < 0 || index >= AVATARS.length) {
-      index = Math.floor(Math.random() * AVATARS.length);
-      window.sessionStorage.setItem(sessionKey, String(index));
+  const [avatarIndex, setAvatarIndex] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!user) {
+      setAvatarIndex(null);
+      return;
     }
-    return AVATARS[index];
-  }, [user]);
+
+    const pickRandom = () => Math.floor(Math.random() * AVATARS.length);
+
+    if (typeof window === "undefined") {
+      setAvatarIndex(pickRandom());
+      return;
+    }
+
+    const sessionKey = `pt-avatar-${user.uid || user.email || "guest"}`;
+
+    try {
+      const stored = window.sessionStorage.getItem(sessionKey);
+      const storedIndex = stored !== null ? Number(stored) : Number.NaN;
+
+      if (
+        Number.isInteger(storedIndex) &&
+        storedIndex >= 0 &&
+        storedIndex < AVATARS.length
+      ) {
+        setAvatarIndex(storedIndex);
+        return;
+      }
+
+      const newIndex = pickRandom();
+      window.sessionStorage.setItem(sessionKey, String(newIndex));
+      setAvatarIndex(newIndex);
+    } catch (error) {
+      setAvatarIndex((prev) => (prev !== null ? prev : pickRandom()));
+    }
+  }, [user?.uid, user?.email]);
+
+  const avatarSrc = avatarIndex !== null ? AVATARS[avatarIndex] : null;
 
   if (!user) {
     return (

@@ -62,7 +62,15 @@ export const LoginModal: React.FC<Props> = ({ open, onClose }) => {
       handleClose();
     } catch (authError) {
       console.error("No se pudo iniciar sesión con Google", authError);
-      setError("No pudimos conectar con Google. Revisá tu conexión o probá en otra ventana.");
+      const code = (authError as { code?: string }).code;
+
+      if (code === "auth/web-storage-unsupported") {
+        setError(
+          "Tu navegador bloquea el almacenamiento necesario para iniciar sesión. Probá desactivar bloqueo de cookies o abrir el sitio en Safari/Chrome fuera de modo privado."
+        );
+      } else {
+        setError("No pudimos conectar con Google. Revisá tu conexión o probá en otra ventana.");
+      }
       setStatus("error");
     }
   };

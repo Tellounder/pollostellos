@@ -49,8 +49,24 @@ const getAuthInstance = async () => {
   if (!authInstancePromise) {
     authInstancePromise = (async () => {
       const app = await loadFirebaseApp();
-      const { getAuth } = await loadAuthModule();
-      return getAuth(app);
+      const authModule = await loadAuthModule();
+
+      if ("initializeAuth" in authModule) {
+        try {
+          return authModule.initializeAuth(app, {
+            persistence: [
+              authModule.indexedDBLocalPersistence,
+              authModule.browserLocalPersistence,
+              authModule.browserSessionPersistence,
+            ],
+            popupRedirectResolver: authModule.browserPopupRedirectResolver,
+          });
+        } catch (error) {
+          // initializeAuth can throw if auth was already initialized elsewhere
+        }
+      }
+
+      return authModule.getAuth(app);
     })();
   }
   return authInstancePromise;
@@ -64,16 +80,46 @@ const getProvider = async () => {
   return providerCache;
 };
 
+const canUseSessionStorage = () => {
+  if (typeof window === "undefined") return false;
+  try {
+    const testKey = "__pt_storage_probe";
+    window.sessionStorage.setItem(testKey, "1");
+    window.sessionStorage.removeItem(testKey);
+    return true;
+  } catch (error) {
+    return false;
+  }
+};
+
 const shouldUseRedirect = () => {
   if (typeof window === "undefined") return false;
 
   const ua = window.navigator.userAgent.toLowerCase();
-  const isIOS = /iphone|ipad|ipod/.test(ua);
   const isStandalone = window.matchMedia("(display-mode: standalone)").matches;
   const isSamsungBrowser = ua.includes("samsungbrowser");
   const isWebView = ua.includes("wv;") || ua.includes("line") || ua.includes("instagram");
 
-  return isIOS || isStandalone || isSamsungBrowser || isWebView;
+  const constrainedEnv = isStandalone || isSamsungBrowser || isWebView;
+  if (!constrainedEnv) {
+    return false;
+  }
+
+  return canUseSessionStorage();
+};
+
+export const getRedirectResultSafe = async () => {
+  const auth = await getAuthInstance();
+  const authModule = await loadAuthModule();
+
+  try {
+    const result = await authModule.getRedirectResult(auth);
+    return result?.user ?? null;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn("Fallo al resolver login con redirect", message);
+    return null;
+  }
 };
 
 export const watchAuthState = async (

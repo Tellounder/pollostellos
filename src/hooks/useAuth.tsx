@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { loginWithGoogle, logout, watchAuthState } from "utils/firebase";
+import { getRedirectResultSafe, loginWithGoogle, logout, watchAuthState } from "utils/firebase";
 import type { Unsubscribe } from "firebase/auth";
 import type { User } from "utils/firebase";
 
@@ -25,6 +25,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     (async () => {
       try {
+        const redirectUser = await getRedirectResultSafe();
+        if (redirectUser && mounted) {
+          setUser(redirectUser);
+          setLoading(false);
+        }
+
         unsubscribe = await watchAuthState((currentUser) => {
           if (!mounted) {
             return;
