@@ -10,12 +10,15 @@ export type CartItem = Product & {
   qty: number;
   key: string;
   side?: string;
+  originalPrice?: number;
 };
 
 // The state of the cart store
+type PricedProduct = Product & { originalPrice?: number };
+
 interface CartState {
   items: CartItem[];
-  addItem: (product: Product, qty?: number, side?: string) => void;
+  addItem: (product: PricedProduct, qty?: number, side?: string) => void;
   removeItem: (key: string) => void;
   setQty: (key: string, qty: number) => void;
   clearCart: () => void;

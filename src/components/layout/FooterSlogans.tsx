@@ -8,9 +8,9 @@ if (typeof window !== "undefined") {
 
 const slogans = [
   "🍗 El sabor que conquista",
-  "🔥 Más rápido que el delivery",
-  "🎰 ¿Jugaste al Jackpollo?",
-  "💳 Próximamente MercadoPago",
+  "🔥 Pollito deshuesado",
+  "🎰 ¿Ya canjeaste tu premio?",
+  "💳 Pagos electronicos",
 ];
 
 const transition = { duration: 0.4, ease: "easeInOut" as const };

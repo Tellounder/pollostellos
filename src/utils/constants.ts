@@ -6,33 +6,36 @@ export type Combo = {
   hasSide: boolean;
   sideOptions?: string[];
   debonable?: boolean;
+  image?: string;
 };
-export type Extra = { id:string; label:string; price:number }
+export type Extra = { id:string; label:string; price:number, image?: string }
 
 export const COMBOS: Combo[] = [
   {
     id: 1,
     name: "Combo 1",
-    description: "Pollo entero + Guarnición + 2 postrecitos de la casa",
-    price: 24000,
+    description: "1 Pollo  + Guarnición + 2 postrecitos de la casa",
+    price: 25000,
     hasSide: true,
     sideOptions: [
-      "Ensalada de lechuga, tomate y zanahoria",
+      "Ensalada mixta",
       "Papa al horno",
-      "Papa con calabaza y batata",
+      "Papa,calabaza y batata",
     ],
+    image: "/media/combo1.png",
   },
   {
     id: 2,
     name: "Combo 2",
-    description: "2 pollos enteros + Guarnición + 4 postrecitos de la casa",
+    description: "2 Pollos  + Guarnición + 4 postrecitos de la casa",
     price: 35000,
     hasSide: true,
     sideOptions: [
-      "Ensalada de lechuga, tomate y zanahoria",
+      "Ensalada mixta",
       "Papa al horno",
-      "Papa con calabaza y batata",
+      "Papa,calabaza y batata",
     ],
+    image: "/media/combo2.png",
   },
   {
     id: 3,
@@ -40,6 +43,7 @@ export const COMBOS: Combo[] = [
     description: "Hamburguesa con queso y papas fritas",
     price: 5000,
     hasSide: false,
+    image: "/media/comboinfantil.png",
   },
 ];
 
@@ -50,9 +54,9 @@ export const SIDES = [
 ];
 
 export const EXTRAS: Extra[] = [
-  { id:'cuarto', label:'1/4 Presa de pollo extra', price:3500 },
-  { id:'postre', label:'Postrecito de la casa extra', price:2000 },
-  { id:'deshuesado', label:'Servicio de deshuesado', price:1500 },
+  { id:'cuarto', label:' Presa de pollo extra', price:6500, image: '/media/presa.png' },
+  { id:'postre', label:'Postrecito de la casa extra', price:2000, image: '/media/gelatina.png' },
+  { id:'deshuesado', label:'Servicio de deshuesado', price:3500, image: '/media/deshuesado.png' },
 ]
 
 export const WHATSAPP_NUMBER = '+5491130623998'

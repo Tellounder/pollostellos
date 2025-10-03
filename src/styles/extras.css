@@ -1,0 +1,180 @@
+/* extras.css — layout para Extras: mini-cards responsive con click */
+
+.extras-list {
+  margin: 0;
+}
+.extras-list__items {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 12px;
+}
+
+/* --- Mini-card --- */
+.extras-list__item {
+  position: relative;
+  background: var(--card, #fff);
+  border: 1px solid var(--border, rgba(0, 0, 0, 0.05));
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  aspect-ratio: 1 / 1;
+  padding: 10px;
+  gap: 8px;
+  transition: all 0.2s ease-in-out;
+  cursor: pointer;
+}
+
+.extras-list__item.is-active {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.1);
+}
+
+/* Título (siempre visible) */
+.extras-list__item-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-align: center;
+  text-transform: uppercase;
+  line-height: 1.2;
+  color: var(--text-light, #666);
+  height: 2.4em; /* Permite hasta 2 líneas */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Media (contenedor de imagen) */
+.extras-list__media {
+  flex-grow: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface, #f9f9f9);
+  border-radius: 8px;
+  overflow: hidden; /* Asegura que la imagen no se salga */
+}
+
+.extras-list__image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* Ajuste perfecto de la imagen */
+}
+
+.extras-list__thumb {
+  width: 56px;
+  height: 56px;
+  border-radius: 8px;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.02), rgba(0, 0, 0, 0.04));
+  border: 1px solid var(--border, rgba(0, 0, 0, 0.05));
+}
+
+/* --- Controles que aparecen con .is-active --- */
+.extras-list__bottom {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 12px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.7));
+  /* Estado inicial: oculto y desplazado */
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+  border-radius: 12px;
+  pointer-events: none; /* No interfiere con el click de la card */
+}
+
+.extras-list__item.is-active .extras-list__bottom {
+  /* Estado visible */
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto; /* Permite interactuar con los botones */
+}
+
+/* Precio (en el centro) */
+.extras-list__price-badge {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-weight: 700;
+  font-size: 1.5rem;
+  color: #fff;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.3);
+  padding: 8px 16px;
+  border-radius: 10px;
+}
+
+/* Botón AGREGAR (centrado por el flex del padre) */
+.extras-list__add {
+  width: 80%;
+  height: 44px;
+  padding: 0;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+/* Stepper (en el centro inferior) */
+.extras-list__stepper {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid var(--border, #eee);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  width: 80%;
+  max-width: 150px;
+  height: 44px;
+}
+
+.extras-list__stepper .count {
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--text, #111);
+}
+
+.extras-list__stepper button {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: 6px;
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+/* --- Dark theme --- */
+.dark .extras-list__item {
+  background: var(--card, #111218);
+  border-color: rgba(255, 255, 255, 0.06);
+}
+.dark .extras-list__item-title {
+  color: var(--text-light-dark, #999);
+}
+.dark .extras-list__media {
+  background: #1f2128;
+}
+.dark .extras-list__thumb {
+  border-color: rgba(255, 255, 255, 0.08);
+}
+.dark .extras-list__stepper {
+  background: rgba(31, 33, 40, 0.95);
+  border-color: #2a2c33;
+}
+.dark .extras-list__stepper .count {
+  color: var(--text-inverse, #fff);
+}

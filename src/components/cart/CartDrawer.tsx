@@ -34,12 +34,29 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ open, onClose, onGoCheck
           ) : (
             items.map((item) => {
               const label = "name" in item ? item.name : item.label;
+              const hasDiscount =
+                "originalPrice" in item && typeof item.originalPrice === "number" && item.originalPrice > item.price;
               return (
                 <article key={item.key} className="cart-line cart-line--drawer">
                   <div className="cart-line__info">
                     <strong className="cart-line__name">{label}</strong>
                     {item.side && <div className="cart-line__meta small">Guarnición: {item.side}</div>}
-                    <div className="cart-line__meta small">{money(item.price)} c/u</div>
+                    <div className="cart-line__meta small cart-line__price">
+                      {hasDiscount ? (
+                        <>
+                          <span className="cart-line__price-original">
+                            {money(item.originalPrice as number)} <small className="cart-line__unit">c/u</small>
+                          </span>
+                          <span className="cart-line__price-current">
+                            {money(item.price)} <small className="cart-line__unit">c/u</small>
+                          </span>
+                        </>
+                      ) : (
+                        <span>
+                          {money(item.price)} <small className="cart-line__unit">c/u</small>
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <div className="cart-line__actions">
                     <div className="stepper" role="group" aria-label={`Cantidad ${label}`}>

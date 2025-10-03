@@ -3,6 +3,7 @@ import { loadMotionModule, preloadMotionModule } from "utils/lazyMotion";
 import type { MotionModule } from "utils/lazyMotion";
 import { FaInstagram, FaTiktok } from "react-icons/fa6";
 import { SiMercadopago } from "react-icons/si";
+import { Link } from "react-router-dom";
 
 if (typeof window !== "undefined") {
   preloadMotionModule();
@@ -126,11 +127,9 @@ function LegalBlock() {
     <div className="footer-legal" aria-label="Información legal y redes sociales">
       <p className="footer-legal__copy">© 2025 Pollos Tello’s. Todos los derechos reservados.</p>
       <nav className="footer-legal__links" aria-label="Enlaces legales">
-        <a href="#terminos">Términos</a>
+        <Link to="/legales/terminos">Términos</Link>
         <span aria-hidden>•</span>
-        <a href="#privacidad">Privacidad</a>
-        <span aria-hidden>•</span>
-        <a href="#contacto">Contacto</a>
+        <a href="mailto:consultaspollostellos@gmail.com">Contacto</a>
       </nav>
       <div className="footer-legal__social" aria-label="Redes sociales">
         <a

@@ -96,16 +96,14 @@ const shouldUseRedirect = () => {
   if (typeof window === "undefined") return false;
 
   const ua = window.navigator.userAgent.toLowerCase();
-  const isStandalone = window.matchMedia("(display-mode: standalone)").matches;
   const isSamsungBrowser = ua.includes("samsungbrowser");
   const isWebView = ua.includes("wv;") || ua.includes("line") || ua.includes("instagram");
 
-  const constrainedEnv = isStandalone || isSamsungBrowser || isWebView;
-  if (!constrainedEnv) {
-    return false;
+  if (isSamsungBrowser || isWebView) {
+    return canUseSessionStorage();
   }
 
-  return canUseSessionStorage();
+  return false;
 };
 
 export const getRedirectResultSafe = async () => {

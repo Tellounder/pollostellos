@@ -32,6 +32,17 @@ export function Home() {
 
   return (
     <div className="grid" style={{ maxWidth: 560, margin: "24px auto", justifyItems: "center" }}>
+      <div className="home-casino-banner" aria-label="Beneficios de los combos">
+        
+        
+        <div className="home-casino-banner__inner">
+          <div className="home-casino-banner__track" role="presentation">
+            <span>TODOS NUESTROS COMBOS INCLUYEN ENTRADA · PRINCIPAL · POSTRE</span>
+            <span>TODOS NUESTROS COMBOS INCLUYEN ENTRADA · PRINCIPAL · POSTRE</span>
+            <span>TODOS NUESTROS COMBOS INCLUYEN ENTRADA · PRINCIPAL · POSTRE</span>
+          </div>
+        </div>
+      </div>
       <div className="card center auth-card home-hero">
         <h1 className="home-hero__title">
           <span className="home-hero__icon" aria-hidden>

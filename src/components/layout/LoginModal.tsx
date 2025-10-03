@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
-import { useAuth } from "hooks/useAuth";
+import { useAuth, TERMS_ACCEPTED_KEY, TERMS_PENDING_KEY } from "hooks/useAuth";
 import { FaXmark } from "react-icons/fa6";
 import { FcGoogle } from "react-icons/fc";
+import { Link } from "react-router-dom";
 
 type Props = {
   open: boolean;
@@ -13,6 +14,14 @@ export const LoginModal: React.FC<Props> = ({ open, onClose }) => {
   const [isRegistering, setIsRegistering] = useState(false);
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
+  const [acceptedTerms, setAcceptedTerms] = useState(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      return window.localStorage.getItem(TERMS_ACCEPTED_KEY) === "true";
+    } catch (error) {
+      return false;
+    }
+  });
   const primaryButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -54,9 +63,14 @@ export const LoginModal: React.FC<Props> = ({ open, onClose }) => {
   };
 
   const handleAuth = async () => {
-    if (status === "loading") return;
+    if (status === "loading" || !acceptedTerms) return;
     setStatus("loading");
     setError(null);
+    try {
+      window.localStorage.setItem(TERMS_PENDING_KEY, "true");
+    } catch (error) {
+      // ignore storage errors
+    }
     try {
       await login();
       handleClose();
@@ -72,6 +86,11 @@ export const LoginModal: React.FC<Props> = ({ open, onClose }) => {
         setError("No pudimos conectar con Google. Revisá tu conexión o probá en otra ventana.");
       }
       setStatus("error");
+      try {
+        window.localStorage.removeItem(TERMS_PENDING_KEY);
+      } catch (error) {
+        // ignore
+      }
     }
   };
 
@@ -104,7 +123,7 @@ export const LoginModal: React.FC<Props> = ({ open, onClose }) => {
           ref={primaryButtonRef}
           className="btn-google"
           onClick={handleAuth}
-          disabled={status === "loading"}
+          disabled={status === "loading" || !acceptedTerms}
         >
           <FcGoogle aria-hidden />
           {status === "loading"
@@ -113,6 +132,28 @@ export const LoginModal: React.FC<Props> = ({ open, onClose }) => {
             ? "Registrarse con Google"
             : "Iniciar sesión con Google"}
         </button>
+        <label className="modal__checkbox">
+          <input
+            type="checkbox"
+            checked={acceptedTerms}
+            onChange={(event) => {
+              const value = event.target.checked;
+              setAcceptedTerms(value);
+              try {
+                if (value) {
+                  window.localStorage.setItem(TERMS_ACCEPTED_KEY, "true");
+                } else {
+                  window.localStorage.removeItem(TERMS_ACCEPTED_KEY);
+                }
+              } catch (error) {
+                // ignore
+              }
+            }}
+          />
+          <span>
+            Acepto los <Link to="/legales/terminos">términos y condiciones</Link>.
+          </span>
+        </label>
         <button className="modal__link" type="button" onClick={toggleMode}>
           {isRegistering ? "¿Ya tenés cuenta? Iniciá sesión" : "¿No tenés cuenta? Registrate"}
         </button>

@@ -9,8 +9,10 @@ import { Home } from "pages/Home";
 import { Menu } from "pages/Menu";
 import { Checkout } from "pages/Checkout";
 import { Thanks } from "pages/Thanks";
+import { Terms } from "pages/Terms";
 import FooterInfo from "components/layout/FooterInfo";
 import FooterSlogans from "components/layout/FooterSlogans";
+import { PwaInstallBanner } from "components/pwa/PwaInstallBanner";
 
 function App() {
   const navigate = useNavigate();
@@ -28,11 +30,13 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/menu" element={<Menu />} />
           <Route path="/checkout" element={<Checkout />} />
+          <Route path="/legales/terminos" element={<Terms />} />
           <Route path="/thanks" element={<Thanks />} />
         </Routes>
       </main>
       {showAuthFooter && <FooterInfo />}
       {showMenuFooter && <FooterSlogans />}
+      <PwaInstallBanner />
       <div
         className={`cart-backdrop ${isCartOpen ? "show" : ""}`}
         onClick={() => setCartOpen(false)}
