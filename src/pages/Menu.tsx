@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useCart } from "hooks/useCart";
 import { useAuth } from "hooks/useAuth";
 import { useCustomerSummary } from "hooks/useCustomerSummary";
-import { COMBOS } from "utils/constants";
+import { COMBOS, INDIVIDUALES } from "utils/constants";
 import type { Combo } from "utils/constants";
 import { ComboCard } from "components/products/ComboCard";
 import { ExtrasList } from "components/products/ExtrasList";
@@ -305,6 +305,15 @@ export function Menu() {
         </div>
         <div className="menu-combos__slider" role="list">
           {combos.map(renderCombo)}
+        </div>
+      </section>
+      <section className="menu-combos" aria-label="Individuales disponibles">
+        <div className="menu-combos__header">
+          <h2 className="menu-combos__title">--- INDIVIDUALES ---</h2>
+          <p className="small menu-combos__hint">Deslizá para ver todas las opciones</p>
+        </div>
+        <div className="menu-combos__slider" role="list">
+          {INDIVIDUALES.map(renderCombo)}
         </div>
       </section>
       <ExtrasList />

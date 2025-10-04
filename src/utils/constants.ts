@@ -61,6 +61,33 @@ export const EXTRAS: Extra[] = [
 
 export const WHATSAPP_NUMBER = '+5491130623998'
 
+export const INDIVIDUALES: Combo[] = [
+  {
+    id: 4,
+    name: "Luzbela",
+    description: "Juego pata y muslo + guarnicion + postre",
+    price: 15000,
+    hasSide: false,
+    image: "/media/pataymuslo.png",
+  },
+  {
+    id: 5,
+    name: "Redonditos",
+    description: "Buñuelos de acelga extremos! con postrecito incluido",
+    price: 10000,
+    hasSide: false,
+    image: "/media/buñuelos.png",
+  },
+  {
+    id: 6,
+    name: "TRES PINCHOS",
+    description: "Crochet de pollo supremaciacos",
+    price: 12000,
+    hasSide: false,
+    image: "/media/pinchos.png",
+  },
+];
+
 export function isExtra(product: Combo | Extra): product is Extra {
   return (product as Extra).label !== undefined;
 }

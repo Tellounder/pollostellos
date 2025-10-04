@@ -795,6 +795,7 @@ button svg {
   line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  flex-grow: 1;
 }
 
 .combo-card__controls {
@@ -880,26 +881,7 @@ button svg {
   }
 }
 
-@media (min-width: 768px) {
-  .combo-card__quick-select {
-    display: none;
-  }
 
-  .combo-card__select {
-    position: relative;
-    flex: 1 1 auto;
-  }
-
-  .combo-card__select select {
-    position: static;
-    opacity: 1;
-    pointer-events: auto;
-  }
-
-  .combo-card__controls-row .combo-card__button {
-    flex: 0 0 clamp(140px, 22%, 160px);
-  }
-}
 
 .combo-card__select select:focus {
   outline: none;
