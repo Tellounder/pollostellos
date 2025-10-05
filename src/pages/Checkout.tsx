@@ -12,7 +12,7 @@ import { BonusCountdownOverlay } from "components/bonus/BonusCountdownOverlay";
 import { BonusRewardModal } from "components/bonus/BonusRewardModal";
 import { SubmittingOverlay } from "components/common/SubmittingOverlay";
 import { waLink } from "utils/format";
-import { api } from "utils/api";
+import { api, type CreateOrderPayload } from "utils/api";
 import { EXTRAS, WHATSAPP_NUMBER } from "utils/constants";
 import type { CartItem } from "store/cart";
 import {
@@ -35,6 +35,8 @@ const formatArs = (value: number) =>
     minimumFractionDigits: 0,
   }).format(value);
 
+const formatOrderCode = (orderNumber: number) => `PT-${orderNumber.toString().padStart(5, "0")}`;
+
 const promoExtra = EXTRAS.find((extra) => extra.id === "deshuesado") ?? null;
 
 const isBonusThreshold = (count: number) => count >= 3 && (count % 7 === 3 || count % 7 === 0);
@@ -47,6 +49,14 @@ type OrderForm = {
   paymentMethod: string;
 };
 
+type LastOrderRef = {
+  id: string;
+  number: number;
+  code: string;
+  whatsappUrl: string;
+  message: string;
+};
+
 const initialForm: OrderForm = {
   customerName: "",
   deliveryAddress: "",
@@ -55,8 +65,25 @@ const initialForm: OrderForm = {
   paymentMethod: "Efectivo",
 };
 
+const TIMELINE_STEPS: Array<{ title: string; description: string }> = [
+  {
+    title: "Revisá",
+    description: "Chequeá nombre y entrega.",
+  },
+  {
+    title: "WhatsApp",
+    description: "Abrimos el chat con tu pedido listo para ajustar y enviar.",
+  },
+  {
+    title: "Confirmación",
+    description: "Validamos el pedido; si volvés, ves tu progreso.",
+  },
+];
+
+const SUMMARY_PREVIEW_COUNT = 2;
+
 const Checkout: React.FC = () => {
-  const { items, addItem, setQty, removeItem, totalLabel, clearCart } = useCart();
+  const { items, addItem, setQty, total, totalLabel, clearCart } = useCart();
   const { user, backendUserId } = useAuth();
   const { open, countdown, item, accepted, show, accept, cancel, reset } = useUpsell();
   const navigate = useNavigate();
@@ -75,6 +102,9 @@ const Checkout: React.FC = () => {
   const submitDelayRef = useRef<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [prefillNotice, setPrefillNotice] = useState<string | null>(null);
+  const [summaryExpanded, setSummaryExpanded] = useState(false);
+  const [lastOrderRef, setLastOrderRef] = useState<LastOrderRef | null>(null);
+  const isRegistered = Boolean(user && backendUserId);
   const profileStorageKey = useMemo(() => {
     if (!backendUserId) return null;
     return `pt_checkout_profile_${backendUserId}`;
@@ -228,7 +258,7 @@ const Checkout: React.FC = () => {
       setPrefillNotice(null);
     }
 
-    if (!promoExtra) {
+    if (!promoExtra || !isRegistered) {
       return () => {
         if (autoUpsellTimer) {
           window.clearTimeout(autoUpsellTimer);
@@ -251,7 +281,7 @@ const Checkout: React.FC = () => {
         window.clearTimeout(autoUpsellTimer);
       }
     };
-  }, [promoExtra, readStoredProfile, show, user]);
+  }, [isRegistered, promoExtra, readStoredProfile, show]);
 
   const handleUpsellAccept = () => {
     if (!user) {
@@ -274,12 +304,18 @@ const Checkout: React.FC = () => {
   };
 
   const openWhatsApp = () => {
-    window.open(waLink(WHATSAPP_NUMBER, pedidoMessage), "_blank");
+    if (lastOrderRef) {
+      window.open(lastOrderRef.whatsappUrl, "_blank");
+      return;
+    }
+    const message = buildPedidoMessage();
+    window.open(waLink(WHATSAPP_NUMBER, message), "_blank");
   };
 
   const finalizeOrder = () => {
     clearCart();
     setForm(initialForm);
+    setLastOrderRef(null);
     navigate("/thanks");
   };
 
@@ -337,7 +373,7 @@ const Checkout: React.FC = () => {
     event: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
     formInteractedRef.current = true;
-    if (!promoExtra || promoTriggeredRef.current || accepted || open) {
+    if (!promoExtra || !isRegistered || promoTriggeredRef.current || accepted || open) {
       return;
     }
     promoTriggeredRef.current = true;
@@ -370,49 +406,56 @@ const Checkout: React.FC = () => {
     }));
   };
 
-  const pedidoMessage = useMemo(() => {
-    let intro = `🍗 NUEVO PEDIDO - POLLOS TELLO’S\n\n`;
+  const buildPedidoMessage = useCallback(
+    (orderCode?: string) => {
+      let intro = `🍗 NUEVO PEDIDO - POLLOS TELLO’S\n\n`;
 
-    intro += `\t\u{200B}👤 Cliente: ${form.customerName || user?.displayName || "Invitado"}\n`;
-    if (form.email) {
-      intro += `\t\u{200B}📧 Email: ${form.email}\n`;
-    }
-    if (form.phoneNumber) {
-      intro += `\t\u{200B}📱 Teléfono: ${form.phoneNumber}\n`;
-    }
-    intro += `\t\u{200B}📍 Dirección: ${form.deliveryAddress}\n\n`;
-    intro += `\t\u{200B}🛒 CARRITO:\n`;
+      intro += `\t\u{200B}👤 Cliente: ${form.customerName || user?.displayName || "Invitado"}\n`;
+      if (orderCode) {
+        intro += `\t\u{200B}📦 Pedido: ${orderCode}\n`;
+      }
+      if (form.email) {
+        intro += `\t\u{200B}📧 Email: ${form.email}\n`;
+      }
+      if (form.phoneNumber) {
+        intro += `\t\u{200B}📱 Teléfono: ${form.phoneNumber}\n`;
+      }
+      intro += `\t\u{200B}📍 Dirección: ${form.deliveryAddress}\n\n`;
+      intro += `\t\u{200B}🛒 CARRITO:\n`;
 
-    const itemsText = items
-      .map((item) => {
-        const label = "name" in item ? item.name : item.label;
-        const sideLabel = item.side ? ` (${item.side})` : "";
-        const originalUnit = "originalPrice" in item && typeof item.originalPrice === "number" ? item.originalPrice : null;
-        const currentTotal = formatArs(item.price * item.qty);
-        const basePrice =
-          originalUnit && originalUnit > item.price
-            ? `${currentTotal} (antes ${formatArs(originalUnit * item.qty)})`
-            : currentTotal;
-        let base = `\t\u{200B}- ${label}${sideLabel} x${item.qty} — ${basePrice}`;
-        if ("description" in item && item.description) {
-          base += `\n\t\u{200B}  _${item.description}_`;
-        }
-        return base;
-      })
-      .join("\n");
+      const itemsText = items
+        .map((item) => {
+          const label = "name" in item ? item.name : item.label;
+          const sideLabel = item.side ? ` (${item.side})` : "";
+          const originalUnit = "originalPrice" in item && typeof item.originalPrice === "number" ? item.originalPrice : null;
+          const currentTotal = formatArs(item.price * item.qty);
+          const basePrice =
+            originalUnit && originalUnit > item.price
+              ? `${currentTotal} (antes ${formatArs(originalUnit * item.qty)})`
+              : currentTotal;
+          let base = `\t\u{200B}- ${label}${sideLabel} x${item.qty} — ${basePrice}`;
+          if ("description" in item && item.description) {
+            base += `\n\t\u{200B}  _${item.description}_`;
+          }
+          return base;
+        })
+        .join("\n");
 
-    intro += `${itemsText}\n\n`;
-    intro += `\t\u{200B}💰 TOTAL: ${totalLabel}`;
-    intro += `\n\t\u{200B}🍖 Pollo deshuesado: ${accepted ? "Sí" : "No"}`;
-    intro += `\n\t\u{200B}💳 Método de pago: ${form.paymentMethod}`;
-    intro += `\n\t\u{200B}👤 Usuario: ${user?.displayName || user?.email || "Invitado"}`;
+      intro += `${itemsText}\n\n`;
+      intro += `\t\u{200B}💰 TOTAL: ${totalLabel}`;
+      intro += `\n\t\u{200B}🍖 Pollo deshuesado: ${accepted ? "Sí" : "No"}`;
+      intro += `\n\t\u{200B}💳 Método de pago: ${form.paymentMethod}`;
+      intro += `\n\t\u{200B}👤 Usuario: ${user?.displayName || user?.email || "Invitado"}`;
 
-    return intro;
-  }, [accepted, form, items, totalLabel, user]);
+      return intro;
+    },
+    [accepted, form, items, totalLabel, user]
+  );
 
   const handleSubmit = async () => {
     setIsSubmitting(true);
     const submitStart = Date.now();
+    setLastOrderRef(null);
 
     const cartItems = items as CartItem[];
     const purchaseSummary: StoredPurchase = {
@@ -436,6 +479,55 @@ const Checkout: React.FC = () => {
       paymentMethod: form.paymentMethod,
     };
     persistProfileSnapshot(profileSnapshot);
+
+    try {
+      const orderPayload: CreateOrderPayload = {
+        userId: backendUserId ?? undefined,
+        customerName: form.customerName.trim(),
+        customerEmail: form.email.trim(),
+        customerPhone: form.phoneNumber ? form.phoneNumber.trim() : undefined,
+        delivery: {
+          addressLine: form.deliveryAddress.trim(),
+        },
+        paymentMethod: form.paymentMethod,
+        notes: accepted ? "Aceptó pollo deshuesado de cortesía." : undefined,
+        items: cartItems.map((item) => ({
+          productId: String((item as { id: string | number }).id),
+          label: "name" in item ? item.name : item.label,
+          quantity: item.qty,
+          unitPrice: Number(item.price.toFixed(2)),
+          lineTotal: Number((item.price * item.qty).toFixed(2)),
+          side: item.side,
+          type: "name" in item ? "combo" : "extra",
+          metadata:
+            "description" in item && item.description
+              ? { description: item.description as string }
+              : undefined,
+        })),
+        totalGross: Number(total.toFixed(2)),
+        totalNet: Number(total.toFixed(2)),
+        metadata: {
+          acceptedUpsell: accepted,
+          guestCheckout: !backendUserId,
+        },
+      };
+
+      const createdOrder = await api.createOrder(orderPayload);
+      const orderCode = formatOrderCode(createdOrder.number);
+      const messageWithCode = buildPedidoMessage(orderCode);
+      const whatsappUrl = waLink(WHATSAPP_NUMBER, messageWithCode);
+
+      setLastOrderRef({
+        id: createdOrder.id,
+        number: createdOrder.number,
+        code: orderCode,
+        whatsappUrl,
+        message: messageWithCode,
+      });
+    } catch (error) {
+      console.error("No se pudo crear el pedido", error);
+      setLastOrderRef(null);
+    }
 
     const operationsPromise = (async () => {
       let totalPurchases = 0;
@@ -561,6 +653,10 @@ const Checkout: React.FC = () => {
   }, [open, resumePendingFocus]);
 
   useEffect(() => {
+    setSummaryExpanded(false);
+  }, [items.length]);
+
+  useEffect(() => {
     return () => {
       cleanupBonusTimers();
     };
@@ -593,130 +689,372 @@ const Checkout: React.FC = () => {
     []
   );
 
-  return (
-    <div ref={formTopRef} className="container">
-      <h2>Datos de entrega</h2>
-      {prefillNotice && <p className="prefill-note">{prefillNotice}</p>}
-      <div className="card" style={{ marginBottom: 20 }}>
-        <div className="grid" style={{ gap: 16 }}>
-          <label className="field">
-            <span className="field-label">Nombre y apellido *</span>
-            <input
-              type="text"
-              autoComplete="name"
-              value={form.customerName}
-              onChange={(e) => handleChange("customerName", e.target.value)}
-              onFocus={handleFormFocus}
-              placeholder="Tu nombre"
-            />
-          </label>
-          <label className="field">
-            <span className="field-label">Dirección *</span>
-            <input
-              type="text"
-              autoComplete="street-address"
-              value={form.deliveryAddress}
-              onChange={(e) => handleChange("deliveryAddress", e.target.value)}
-              onFocus={handleFormFocus}
-              placeholder="Calle, número, piso, depto."
-            />
-          </label>
-          <label className="field">
-            <span className="field-label">Correo electrónico *</span>
-            <input
-              type="email"
-              autoComplete="email"
-              value={form.email}
-              onChange={(e) => handleChange("email", e.target.value)}
-              onFocus={handleFormFocus}
-              placeholder="tu@email.com"
-            />
-          </label>
-          <label className="field">
-            <span className="field-label">Teléfono</span>
-            <input
-              type="tel"
-              autoComplete="tel"
-              value={form.phoneNumber}
-              onChange={(e) => handleChange("phoneNumber", e.target.value)}
-              onFocus={handleFormFocus}
-              placeholder="+54 9 11 1234-5678"
-            />
-          </label>
-          <label className="field">
-            <span className="field-label">Método de pago *</span>
-            <select
-              value={form.paymentMethod}
-              onChange={(e) => handleChange("paymentMethod", e.target.value)}
-              onFocus={handleFormFocus}
-            >
-              <option value="Efectivo">Efectivo</option>
-              <option value="Mercado Pago">Mercado Pago</option>
-            </select>
-          </label>
-        </div>
-      </div>
-      <div className="card">
-        <h3>Tu pedido</h3>
-        {items.length === 0 ? (
-          <p className="small">Todavía no agregaste productos.</p>
-        ) : (
-          <>
-            {items.map((item) => {
-              const hasDiscount =
-                "originalPrice" in item && typeof item.originalPrice === "number" && item.originalPrice > item.price;
+  const summaryItemsToRender = useMemo(() => {
+    if (summaryExpanded || !isRegistered) {
+      return items;
+    }
+    return items.slice(0, SUMMARY_PREVIEW_COUNT);
+  }, [isRegistered, items, summaryExpanded]);
 
-              return (
-                <div className="cart-line" key={item.key}>
-                  <div style={{ maxWidth: "65%" }}>
-                    <strong>{"name" in item ? item.name : item.label}</strong>
-                    {"description" in item && item.description && (
-                      <div className="small">{item.description}</div>
-                    )}
-                    {item.side && <div className="small">Guarnición: {item.side}</div>}
-                    <div className="small cart-line__price">
-                      {hasDiscount ? (
-                        <>
-                          <span className="cart-line__price-original">
-                            {formatArs((item as { originalPrice: number }).originalPrice)}
-                          </span>
-                          <span className="cart-line__price-current">{formatArs(item.price)}</span>
-                        </>
-                      ) : (
-                        <span>{formatArs(item.price)}</span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="stepper" role="group">
-                    <button className="btn-ghost" onClick={() => setQty(item.key, item.qty - 1)}>
-                      -
-                    </button>
-                    <div className="count">{item.qty}</div>
-                    <button className="btn-ghost" onClick={() => setQty(item.key, item.qty + 1)}>
-                      +
-                    </button>
-                  </div>
-                  <button className="btn-ghost" onClick={() => removeItem(item.key)}>
-                    Eliminar
+  const renderSummaryList = (list: CartItem[]) =>
+    list.map((item) => {
+      const hasDiscount =
+        "originalPrice" in item &&
+        typeof item.originalPrice === "number" &&
+        item.originalPrice > item.price;
+
+      return (
+        <li className="checkout-summary__item" key={item.key}>
+          <div className="checkout-summary__main">
+            <span className="checkout-summary__title">{"name" in item ? item.name : item.label}</span>
+            {"description" in item && item.description && (
+              <span className="checkout-summary__description">{item.description}</span>
+            )}
+            {item.side && <span className="checkout-summary__meta">Guarnición: {item.side}</span>}
+          </div>
+          <div className="checkout-summary__meta-group">
+            <div className="checkout-summary__price">
+              {hasDiscount ? (
+                <>
+                  <span className="checkout-summary__price-original">
+                    {formatArs((item as { originalPrice: number }).originalPrice)}
+                  </span>
+                  <span className="checkout-summary__price-current">{formatArs(item.price)}</span>
+                </>
+              ) : (
+                <span>{formatArs(item.price)}</span>
+              )}
+            </div>
+            <div className="checkout-summary__controls" role="group" aria-label="Cantidad">
+              <button
+                className="btn-ghost"
+                onClick={() => setQty(item.key, Math.max(0, item.qty - 1))}
+                aria-label={item.qty === 1 ? "Quitar" : "Restar"}
+              >
+                -
+              </button>
+              <span className="checkout-summary__count" aria-live="polite">
+                {item.qty}
+              </span>
+              <button className="btn-ghost" onClick={() => setQty(item.key, item.qty + 1)}>
+                +
+              </button>
+            </div>
+          </div>
+        </li>
+      );
+    });
+
+  const timelinePosition = useMemo(() => {
+    if (bonusStage === "reward") {
+      return 3;
+    }
+    if (bonusStage === "countdown" || bonusStage === "pre") {
+      return 2;
+    }
+    if (isSubmitting) {
+      return 2;
+    }
+    return 1;
+  }, [bonusStage, isSubmitting]);
+
+  if (!isRegistered) {
+    return (
+      <div ref={formTopRef} className="container checkout-shell checkout-shell--guest">
+        <div className="checkout-shell__inner checkout-shell__inner--guest">
+          <header className="checkout-head checkout-head--guest">
+            <h1 className="checkout-head__title">Confirmá tu pedido</h1>
+            <p className="checkout-head__subtitle">
+              Completá tus datos y enviá el WhatsApp: nosotros seguimos tu pedido y te avisamos cuando esté listo.
+            </p>
+          </header>
+          {prefillNotice && <p className="prefill-note">{prefillNotice}</p>}
+          <section className="checkout-card checkout-card--form">
+            <div className="checkout-card__header">
+              <span className="checkout-card__eyebrow">Datos de entrega</span>
+              <h3 className="checkout-card__title">Contanos a dónde enviamos</h3>
+            </div>
+            <div className="checkout-form-grid">
+              <label className="field checkout-field">
+                <span className="field-label">Nombre y apellido *</span>
+                <input
+                  type="text"
+                  autoComplete="name"
+                  value={form.customerName}
+                  onChange={(e) => handleChange("customerName", e.target.value)}
+                  onFocus={handleFormFocus}
+                  placeholder="Tu nombre"
+                />
+              </label>
+              <label className="field checkout-field">
+                <span className="field-label">Dirección *</span>
+                <input
+                  type="text"
+                  autoComplete="street-address"
+                  value={form.deliveryAddress}
+                  onChange={(e) => handleChange("deliveryAddress", e.target.value)}
+                  onFocus={handleFormFocus}
+                  placeholder="Calle, número, piso, depto."
+                />
+              </label>
+              <label className="field checkout-field">
+                <span className="field-label">Correo electrónico *</span>
+                <input
+                  type="email"
+                  autoComplete="email"
+                  value={form.email}
+                  onChange={(e) => handleChange("email", e.target.value)}
+                  onFocus={handleFormFocus}
+                  placeholder="tu@email.com"
+                />
+              </label>
+              <label className="field checkout-field">
+                <span className="field-label">Teléfono</span>
+                <input
+                  type="tel"
+                  autoComplete="tel"
+                  value={form.phoneNumber}
+                  onChange={(e) => handleChange("phoneNumber", e.target.value)}
+                  onFocus={handleFormFocus}
+                  placeholder="+54 9 11 1234-5678"
+                />
+              </label>
+              <label className="field checkout-field">
+                <span className="field-label">Método de pago *</span>
+                <select
+                  value={form.paymentMethod}
+                  onChange={(e) => handleChange("paymentMethod", e.target.value)}
+                  onFocus={handleFormFocus}
+                >
+                  <option value="Efectivo">Efectivo</option>
+                  <option value="Mercado Pago">Mercado Pago</option>
+                </select>
+              </label>
+            </div>
+          </section>
+          <section className="checkout-card checkout-card--summary">
+            <div className="checkout-card__header">
+              <span className="checkout-card__eyebrow">Tu pedido</span>
+              <h3 className="checkout-card__title">Revisá antes de enviar</h3>
+            </div>
+            {items.length === 0 ? (
+              <p className="checkout-empty">Todavía no agregaste productos. Volvé al menú para sumar combos.</p>
+            ) : (
+              <>
+                <ul className="checkout-summary__list">{renderSummaryList(summaryItemsToRender)}</ul>
+                <div className="checkout-summary__footer">
+                  <span>Total</span>
+                  <strong>{totalLabel}</strong>
+                </div>
+                <div className="checkout-summary__actions">
+                  <button
+                    className="btn-primary checkout-summary__button"
+                    onClick={handleSubmit}
+                    disabled={!isFormValid || isSubmitting}
+                  >
+                    Enviar pedido por WhatsApp
+                  </button>
+                  <span className="checkout-summary__note">
+                    Enviá el mensaje y listo. Guardamos tus datos para que la próxima vez sea aún más rápido.
+                  </span>
+                  <button className="btn-ghost checkout-summary__secondary" onClick={() => navigate("/menu")}>
+                    Volver al menú
                   </button>
                 </div>
+              </>
+            )}
+          </section>
+        </div>
+        <SubmittingOverlay active={isSubmitting && bonusStage === "idle"} />
+        <BonusPreModal
+          open={bonusStage === "pre"}
+          userName={user?.displayName || user?.email || "Cliente"}
+          totalPurchases={bonusInfo?.totalPurchases}
+          onConfirm={startBonusCountdown}
+          onCancel={handleBonusLater}
+        />
+        <BonusCountdownOverlay active={bonusStage === "countdown"} seconds={bonusCountdown} />
+        <BonusRewardModal
+          open={bonusStage === "reward"}
+          userName={user?.displayName || user?.email || "Cliente"}
+          totalPurchases={bonusInfo?.totalPurchases || 3}
+          onRedeem={handleBonusRedeem}
+        />
+        <UpsellModal
+          open={open}
+          countdown={countdown}
+          item={item}
+          onAccept={handleUpsellAccept}
+          onCancel={handleUpsellCancel}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div ref={formTopRef} className="container checkout-shell">
+      <div className="checkout-shell__inner">
+        <header className="checkout-head">
+          <h1 className="checkout-head__title">Confirmá tu pedido</h1>
+          <p className="checkout-head__subtitle">
+            Mandá el WhatsApp: tu pedido se prepara igual. Si volvés, acá te mostramos el estado y guardamos sorpresas para vos.
+          </p>
+        </header>
+        <section className="checkout-overview">
+          <div className="checkout-overview__status">
+            <span className="checkout-card__eyebrow">Seguimiento en curso</span>
+            <h2 className="checkout-card__title">Todo listo para enviar</h2>
+            <p className="checkout-overview__lead">
+              Revisá los datos, abrí el chat y, si querés, regresá para ver cómo avanza y sumar beneficios.
+            </p>
+          </div>
+          <ol className="checkout-timeline checkout-timeline--inline">
+            {TIMELINE_STEPS.map((step, index) => {
+              const position = index + 1;
+              const stateClass =
+                timelinePosition > position
+                  ? "is-complete"
+                  : timelinePosition === position
+                    ? "is-active"
+                    : "";
+              return (
+                <li key={step.title} className={`checkout-timeline__item ${stateClass}`}>
+                  <div className="checkout-timeline__badge" aria-hidden="true">
+                    {position}
+                  </div>
+                  <div className="checkout-timeline__body">
+                    <span className="checkout-timeline__title">{step.title}</span>
+                    <span className="checkout-timeline__text">{step.description}</span>
+                  </div>
+                </li>
               );
             })}
-            <hr />
-            <div className="cart-line">
-              <strong>Total</strong>
-              <strong>{totalLabel}</strong>
-            </div>
-          </>
-        )}
-      </div>
-      <div className="actions">
-        <button className="btn-primary" onClick={handleSubmit} disabled={!isFormValid || isSubmitting}>
-          Realizar pedido
-        </button>
-        <button className="btn-ghost" onClick={() => navigate("/menu")}>
-          Volver a combos
-        </button>
+          </ol>
+          {prefillNotice && (
+            <span className="checkout-overview__chip" role="status">{prefillNotice}</span>
+          )}
+        </section>
+        <div className="checkout-columns">
+          <div className="checkout-primary">
+            <section className="checkout-card checkout-card--form">
+              <div className="checkout-card__header">
+                <span className="checkout-card__eyebrow">Datos del cliente</span>
+                <h3 className="checkout-card__title">Personalizá tu entrega</h3>
+                <p className="checkout-card__hint">
+                  Guardamos estos datos para tu próxima vez. ¿Querés pollo deshuesado? Pedilo en el mensaje de WhatsApp: es para todos, incluso invitados.
+                </p>
+              </div>
+              <div className="checkout-form-grid">
+                <label className="field checkout-field">
+                  <span className="field-label">Nombre y apellido *</span>
+                  <input
+                    type="text"
+                    autoComplete="name"
+                    value={form.customerName}
+                    onChange={(e) => handleChange("customerName", e.target.value)}
+                    onFocus={handleFormFocus}
+                    placeholder="Tu nombre"
+                  />
+                </label>
+                <label className="field checkout-field">
+                  <span className="field-label">Dirección *</span>
+                  <input
+                    type="text"
+                    autoComplete="street-address"
+                    value={form.deliveryAddress}
+                    onChange={(e) => handleChange("deliveryAddress", e.target.value)}
+                    onFocus={handleFormFocus}
+                    placeholder="Calle, número, piso, depto."
+                  />
+                </label>
+                <label className="field checkout-field">
+                  <span className="field-label">Correo electrónico *</span>
+                  <input
+                    type="email"
+                    autoComplete="email"
+                    value={form.email}
+                    onChange={(e) => handleChange("email", e.target.value)}
+                    onFocus={handleFormFocus}
+                    placeholder="tu@email.com"
+                  />
+                </label>
+                <label className="field checkout-field">
+                  <span className="field-label">Teléfono</span>
+                  <input
+                    type="tel"
+                    autoComplete="tel"
+                    value={form.phoneNumber}
+                    onChange={(e) => handleChange("phoneNumber", e.target.value)}
+                    onFocus={handleFormFocus}
+                    placeholder="+54 9 11 1234-5678"
+                  />
+                </label>
+                <label className="field checkout-field">
+                  <span className="field-label">Método de pago *</span>
+                  <select
+                    value={form.paymentMethod}
+                    onChange={(e) => handleChange("paymentMethod", e.target.value)}
+                    onFocus={handleFormFocus}
+                  >
+                    <option value="Efectivo">Efectivo</option>
+                    <option value="Mercado Pago">Mercado Pago</option>
+                  </select>
+                </label>
+              </div>
+            </section>
+          </div>
+          <aside className="checkout-secondary">
+            <section className="checkout-card checkout-card--summary">
+              <div className="checkout-card__header">
+                <span className="checkout-card__eyebrow">Tu selección</span>
+                <h3 className="checkout-card__title">Resumen rápido</h3>
+              </div>
+              {items.length === 0 ? (
+                <p className="checkout-empty">Todavía no agregaste productos. Volvé al menú para sumar combos.</p>
+              ) : (
+                <>
+                  <ul className="checkout-summary__list">{renderSummaryList(summaryItemsToRender)}</ul>
+                  {isRegistered && items.length > SUMMARY_PREVIEW_COUNT && (
+                    <button
+                      type="button"
+                      className="checkout-summary__toggle btn-ghost"
+                      onClick={() => setSummaryExpanded((prev) => !prev)}
+                      aria-expanded={summaryExpanded}
+                    >
+                      {summaryExpanded
+                        ? "Ver menos"
+                        : `Ver todo (${items.length - SUMMARY_PREVIEW_COUNT} extra${
+                            items.length - SUMMARY_PREVIEW_COUNT === 1 ? "" : "s"
+                          })`}
+                    </button>
+                  )}
+                  <div className="checkout-summary__footer">
+                    <span>Total</span>
+                    <strong>{totalLabel}</strong>
+                  </div>
+                  <div className="checkout-summary__actions">
+                    <button
+                      className="btn-primary checkout-summary__button"
+                      onClick={handleSubmit}
+                      disabled={!isFormValid || isSubmitting}
+                    >
+                      Enviar pedido por WhatsApp
+                    </button>
+                    <span className="checkout-summary__note">
+                      Enviá el mensaje. Si regresás, acá tenés el seguimiento y los premios acumulados.
+                    </span>
+                    <button className="btn-ghost checkout-summary__secondary" onClick={() => navigate("/menu")}>
+                      Volver al menú
+                    </button>
+                    <p className="checkout-summary__microcopy">
+                      ¿Ya saliste? Guardamos tus datos y recordamos tus favoritos para la próxima visita.
+                    </p>
+                  </div>
+                </>
+              )}
+            </section>
+          </aside>
+        </div>
       </div>
       <SubmittingOverlay active={isSubmitting && bonusStage === "idle"} />
       <BonusPreModal

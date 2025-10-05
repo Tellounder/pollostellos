@@ -9,9 +9,27 @@ type Props = {
   onOpenLogin: () => void;
   onLogout: () => void;
   onGoToMenu: () => void;
+  onOpenOrders: () => void;
+  onOpenAdmin?: () => void;
+  isAdmin: boolean;
+  onOpenDiscounts: () => void;
+  onOpenProfile: () => void;
+  actionsDisabled?: boolean;
 };
 
-export function AccessActions({ user, onStartAsGuest, onOpenLogin, onLogout, onGoToMenu }: Props) {
+export function AccessActions({
+  user,
+  onStartAsGuest,
+  onOpenLogin,
+  onLogout,
+  onGoToMenu,
+  onOpenOrders,
+  onOpenAdmin,
+  isAdmin,
+  onOpenDiscounts,
+  onOpenProfile,
+  actionsDisabled = false,
+}: Props) {
   if (user) {
     return (
       <>
@@ -21,13 +39,38 @@ export function AccessActions({ user, onStartAsGuest, onOpenLogin, onLogout, onG
             Ir al menú
           </button>
           <div className="home-hero__secondary">
-            <button className="btn-secondary btn-sm" type="button" disabled title="Próximamente">
+            <button
+              className="btn-secondary btn-sm"
+              type="button"
+              onClick={onOpenOrders}
+              disabled={actionsDisabled}
+            >
               Mis pedidos
             </button>
-            <button className="btn-secondary btn-sm" type="button" disabled title="Próximamente">
+            {isAdmin && (
+              <button
+                className="btn-secondary btn-sm"
+                type="button"
+                onClick={onOpenAdmin ?? onOpenOrders}
+                disabled={actionsDisabled}
+              >
+                Gestionar pedidos
+              </button>
+            )}
+            <button
+              className="btn-secondary btn-sm"
+              type="button"
+              onClick={onOpenDiscounts}
+              disabled={actionsDisabled}
+            >
               Descuentos
             </button>
-            <button className="btn-secondary btn-sm" type="button" disabled title="Próximamente">
+            <button
+              className="btn-secondary btn-sm"
+              type="button"
+              onClick={onOpenProfile}
+              disabled={actionsDisabled}
+            >
               Mi perfil
             </button>
           </div>
