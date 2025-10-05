@@ -8,7 +8,6 @@ type Props = {
   displayPrice?: number;
   originalPrice?: number;
   locked?: boolean;
-  lockedMessage?: string;
   onLockedClick?: () => void;
 };
 
@@ -17,7 +16,7 @@ export const ComboCard: React.FC<Props> = ({
   displayPrice,
   originalPrice,
   locked = false,
-  onLockedClick, // removed lockedMessage from destructuring to avoid unused variable
+  onLockedClick
 }) => {
   const { addItem } = useCart();
   const DEFAULT_LABEL = "Guarnición favorita";
@@ -30,6 +29,31 @@ export const ComboCard: React.FC<Props> = ({
   const canAdd = !requiresSide || Boolean(selectedSide);
   const effectivePrice = displayPrice ?? combo.price;
   const isLocked = locked;
+
+  const renderLines = (lines: string[]) => (
+    <span className="combo-card__btn-text">
+      {lines.map((line, index) => (
+        <span key={index}>{line}</span>
+      ))}
+    </span>
+  );
+
+  const splitLabel = (label: string) => {
+    if (!label) {
+      return [DEFAULT_LABEL];
+    }
+    if (label === DEFAULT_LABEL) {
+      return ["Guarnición", "favorita"];
+    }
+    if (label.length <= 18 || !label.includes(" ")) {
+      return [label];
+    }
+    const words = label.split(" ");
+    const midpoint = Math.ceil(words.length / 2);
+    const first = words.slice(0, midpoint).join(" ");
+    const second = words.slice(midpoint).join(" ");
+    return second ? [first, second] : [first];
+  };
 
   const priceElement = (
     <span className="combo-card__price">
@@ -84,7 +108,12 @@ export const ComboCard: React.FC<Props> = ({
     <article className={`combo-card${isLocked ? " combo-card--locked" : ""}`} aria-label={combo.name}>
       <header className="combo-card__header">
         <h3 className="combo-card__title">{combo.name}</h3>
-        {isLocked && <span className="combo-card__badge">Exclusivo </span>}
+        {isLocked && (
+          <span className="combo-card__badge">
+            <span>Exclusivo</span>
+            <span>registrados</span>
+          </span>
+        )}
       </header>
 
       {combo.image ? (
@@ -115,15 +144,7 @@ export const ComboCard: React.FC<Props> = ({
               aria-haspopup="listbox"
               aria-controls={`combo-select-${combo.id}`}
             >
-              {quickLabel === DEFAULT_LABEL ? (
-                <span className="combo-card__btn-text">
-                  Guarnición
-                  <br />
-                  favorita
-                </span>
-              ) : (
-                <span className="combo-card__btn-text">{quickLabel}</span>
-              )}
+              {renderLines(splitLabel(quickLabel))}
             </button>
 
             <label className="combo-card__select" aria-hidden="true">
@@ -151,19 +172,9 @@ export const ComboCard: React.FC<Props> = ({
               disabled={!canAdd}
               aria-disabled={!canAdd}
             >
-              {isLocked ? (
-                <span className="combo-card__btn-text">
-                  Registrate
-                  <br />
-                  y ahorrá
-                </span>
-              ) : (
-                <span className="combo-card__btn-text">
-                  Agregar al
-                  <br />
-                  carrito
-                </span>
-              )}
+              {isLocked
+                ? renderLines(["Registrate", "y ahorrá"])
+                : renderLines(["Agregar al", "carrito"])}
             </button>
           </div>
         </div>
@@ -175,19 +186,9 @@ export const ComboCard: React.FC<Props> = ({
             disabled={!canAdd}
             aria-disabled={!canAdd}
           >
-            {isLocked ? (
-              <span className="combo-card__btn-text">
-                Registrate
-                <br />
-                y ahorrá
-              </span>
-            ) : (
-              <span className="combo-card__btn-text">
-                Agregar al
-                <br />
-                carrito
-              </span>
-            )}
+            {isLocked
+              ? renderLines(["Registrate", "y ahorrá"])
+              : renderLines(["Agregar al", "carrito"])}
           </button>
         </div>
       )}

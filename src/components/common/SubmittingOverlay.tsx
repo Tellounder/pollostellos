@@ -22,7 +22,9 @@ export const SubmittingOverlay: React.FC<{ active: boolean }> = ({ active }) => 
             <div></div>
           </div>
         </div>
-          <p className="small">Estamos abriendo WhatsApp con tu pedido listo. Puede tardar unos segundos.</p>
+          <p className="small">
+            Abrimos WhatsApp con tu pedido preparado. Enviá el mensaje; si volvés, acá seguís el estado y encontrás tus beneficios.
+          </p>
         </div>
       </div>
     </OverlayPortal>

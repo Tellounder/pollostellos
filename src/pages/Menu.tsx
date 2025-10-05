@@ -135,20 +135,18 @@ const UserSection: React.FC = () => {
     if (!user) {
       return [
         {
-          title: "Pollos Tello’s, alta gastronomía sin espera.",
-          body: "Elegí tu combo, confirmá por WhatsApp y listo: nosotros nos encargamos.",
+          title: "Seguimos tu pedido acá.",
+          body: "Te abrimos WhatsApp con tu orden lista. Enviála y volvé para revisar el estado y reordenar al toque.",
         },
         {
-          title: "Atajos para vos.",
-          body: "Registrate para guardar tus datos y pedir en segundos.",
+          title: "Guardá tus datos y progreso.",
+          body: "Registrate para no completar tus datos de nuevo y ver el avance de tus pedidos confirmados.",
           ctaLabel: "Registrate",
           onCta: login,
         },
         {
-          title: "Bonus Tello’s en camino.",
-          body: "Cada pedido suma. Registrate y desbloqueá regalos como el Combo 2.",
-          ctaLabel: "Conocé beneficios",
-          onCta: login,
+          title: "Estamos atentos al mensaje.",
+          body: "Si ya enviaste tu pedido, dejá la app abierta: te avisamos acá adentro cuando lo procesemos.",
         },
       ];
     }
@@ -158,20 +156,20 @@ const UserSection: React.FC = () => {
 
     return [
       {
-        title: "Gracias por volver.",
-        body: "Delivery gourmet de barrio, directo a tu puerta.",
+        title: "Seguimos tu orden en tiempo real.",
+        body: "Si ya la enviaste, mantené la app abierta: te avisamos cuando la confirmemos.",
       },
       {
-        title: lastOrderLabel ? `¿Repetimos ${lastOrderLabel}?` : "Tu combo favorito está a un toque.",
+        title: lastOrderLabel ? `¿Repetimos ${lastOrderLabel}?` : "Tu combo favorito listo en un toque.",
         body: lastOrderLabel
-          ? "Tu último pedido quedó listo como favorito. Podés sumarlo al carrito en segundos."
-          : "Guardamos tus datos y preferencias para confirmar el próximo pedido sin vueltas.",
+          ? "Sólo necesitás confirmar. Guardamos tus elecciones para que vuelvas rápido."
+          : "Tu información quedó guardada. Cada confirmación hace tu próximo pedido más simple.",
       },
       {
-        title: "Bonus Tello’s activo.",
+        title: "Progreso y sorpresas.",
         body: hasPendingBonus
-          ? "Tenés un beneficio listo para reclamar en el checkout. No lo dejes pasar."
-          : "Seguí sumando pedidos: las sorpresas llegan cuando menos lo esperás.",
+          ? "Tenemos una sorpresa esperándote en el checkout. Revisala cuando quieras."
+          : "Cada pedido confirmado suma puntos. Te avisamos acá cuando haya una sorpresa para vos.",
       },
     ];
   }, [login, summary.lastPurchase, summary.pendingBonus, user]);
@@ -261,7 +259,6 @@ export function Menu() {
 
   const renderCombo = (combo: Combo) => {
     let locked = false;
-    let lockedMessage: string | undefined;
     let originalPrice: number | undefined;
     let displayPrice = combo.price;
     let priceForCart = combo.price;
@@ -275,7 +272,6 @@ export function Menu() {
       originalPrice = COMBO2_ORIGINAL_PRICE;
       if (isGuest) {
         locked = true;
-        lockedMessage = "Registrate para acceder al Combo 2 con precio especial o repetí el Combo 1.";
       }
     }
 
@@ -288,7 +284,6 @@ export function Menu() {
           displayPrice={displayPrice}
           originalPrice={originalPrice}
           locked={locked}
-          lockedMessage={lockedMessage}
           onLockedClick={locked ? handleLockedComboClick : undefined}
         />
       </div>
