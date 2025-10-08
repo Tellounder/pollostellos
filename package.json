@@ -8,7 +8,9 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test": "vitest"
+    "test": "vitest",
+    "optimize:png" : "find src/assets -type f -name '*.png' -exec pngquant --quality=60-80 --ext .png --force {} \\;",
+    "optimize:jpg": "find src/assets -type f \\( -iname '*.jpg' -o -iname '*.jpeg' \\) -exec mogrify -strip -interlace Plane -quality 80 {} \\;"
   },
   "dependencies": {
     "firebase": "^12.2.1",
