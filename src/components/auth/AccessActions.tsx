@@ -15,6 +15,7 @@ type Props = {
   onOpenDiscounts: () => void;
   onOpenProfile: () => void;
   actionsDisabled?: boolean;
+  hasActiveOrder?: boolean;
 };
 
 export function AccessActions({
@@ -29,75 +30,73 @@ export function AccessActions({
   onOpenDiscounts,
   onOpenProfile,
   actionsDisabled = false,
+  hasActiveOrder = false,
 }: Props) {
   if (user) {
     return (
-      <>
-        <h2 className="home-hero__greeting">¡Hola, {user.displayName || "crack"}!</h2>
-        <div className="home-hero__actions home-hero__actions--signed">
-          <button className="btn-primary home-hero__primary" type="button" onClick={onGoToMenu}>
-            Ir al menú
-          </button>
-          <div className="home-hero__secondary">
-            <button
-              className="btn-secondary btn-sm"
-              type="button"
-              onClick={onOpenOrders}
-              disabled={actionsDisabled}
-            >
-              Mis pedidos
-            </button>
-            {isAdmin && (
-              <button
-                className="btn-secondary btn-sm"
-                type="button"
-                onClick={onOpenAdmin ?? onOpenOrders}
-                disabled={actionsDisabled}
-              >
-                Gestionar pedidos
-              </button>
-            )}
-            <button
-              className="btn-secondary btn-sm"
-              type="button"
-              onClick={onOpenDiscounts}
-              disabled={actionsDisabled}
-            >
-              Descuentos
-            </button>
-            <button
-              className="btn-secondary btn-sm"
-              type="button"
-              onClick={onOpenProfile}
-              disabled={actionsDisabled}
-            >
-              Mi perfil
-            </button>
-          </div>
+      <div className="home-actions home-actions--signed">
+        <div className="home-actions__intro">
+          <p className="home-actions__greeting">¡Hola, {user.displayName || "crack"}!</p>
+          <span className="home-actions__hint">Elegí cómo querés continuar</span>
         </div>
-        <button className="btn-ghost home-hero__ghost" onClick={onLogout}>
+        <button className="btn-primary home-actions__primary" type="button" onClick={onGoToMenu}>
+          Ir al menú
+        </button>
+        <div className="home-actions__grid">
+          <button
+            className="btn-soft btn-sm"
+            type="button"
+            onClick={onOpenOrders}
+            disabled={actionsDisabled}
+            aria-label={hasActiveOrder ? "Mis pedidos (pedido en curso)" : undefined}
+          >
+            Mis pedidos
+            {hasActiveOrder && <span className="home-actions__badge" aria-hidden="true" />}
+          </button>
+          {isAdmin && (
+            <button
+              className="btn-soft btn-sm"
+              type="button"
+              onClick={onOpenAdmin ?? onOpenOrders}
+              disabled={actionsDisabled}
+            >
+              Gestionar pedidos
+            </button>
+          )}
+          <button
+            className="btn-soft btn-sm"
+            type="button"
+            onClick={onOpenDiscounts}
+            disabled={actionsDisabled}
+          >
+            Descuentos
+          </button>
+          <button
+            className="btn-soft btn-sm"
+            type="button"
+            onClick={onOpenProfile}
+            disabled={actionsDisabled}
+          >
+            Mi perfil
+          </button>
+        </div>
+        <button className="btn-ghost home-actions__logout" onClick={onLogout}>
           Cerrar sesión
         </button>
-      </>
+      </div>
     );
   }
 
   return (
-    <div className="home-hero__actions">
-      <button
-        className="btn-primary home-hero__primary"
-        onClick={onStartAsGuest}
-        aria-label="Continuar como invitado"
-      >
+    <div className="home-actions home-actions--guest">
+      <button className="btn-primary home-actions__primary" onClick={onStartAsGuest} aria-label="Continuar como invitado">
         Continuar como invitado
       </button>
-
-      <div className="home-hero__secondary">
-        <button className="btn-secondary btn-sm" onClick={onOpenLogin}>
+      <div className="home-actions__grid home-actions__grid--guest">
+        <button className="btn-soft btn-sm" onClick={onOpenLogin}>
           Iniciar sesión
         </button>
-
-        <button className="btn-secondary btn-sm" onClick={onOpenLogin}>
+        <button className="btn-soft btn-sm btn-soft--accent" onClick={onOpenLogin}>
           Registrarse
         </button>
       </div>

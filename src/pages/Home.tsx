@@ -2,7 +2,7 @@
  * Onboarding screen: invita a registrarse o continuar como invitado antes de entrar al flujo in-app.
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "hooks/useAuth";
 import { useCart } from "hooks/useCart";
 import { LoginModal } from "components/layout/LoginModal";
@@ -14,37 +14,22 @@ import {
   type ProfileFormValues,
   type ProfileStats,
 } from "components/profile/ProfileModal";
+import { CancelOrderModal } from "components/orders/CancelOrderModal";
+import { api, type ApiOrder, type ApiOrderMessage } from "utils/api";
+import { useUserDataLoader } from "hooks/useUserDataLoader";
 import {
-  api,
-  type ApiOrder,
-  type ApiUserDetail,
-  type ApiUserEngagement,
-} from "utils/api";
-import { COMBOS, EXTRAS, INDIVIDUALES } from "utils/constants";
-
-type ActiveDiscount = {
-  id: string;
-  code: string;
-  label: string;
-  value: string;
-  percentage?: string | null;
-  expiresAt?: string | null;
-  usesRemaining: number;
-  totalUses: number;
-};
-
-type DiscountHistoryItem = {
-  id: string;
-  code: string;
-  valueApplied: number;
-  redeemedAt: string;
-  orderCode?: string;
-};
+  buildProfileValues,
+  mapOrderItemsToProducts,
+  processDiscounts,
+  type DiscountSnapshot,
+} from "utils/orders";
+import { ADMIN_EMAIL } from "config/admin";
 
 export function Home() {
   const { user, backendUserId, logout } = useAuth();
   const { addItem, clearCart } = useCart();
   const navigate = useNavigate();
+  const location = useLocation();
   const [loginOpen, setLoginOpen] = useState(false);
   const [ordersModalOpen, setOrdersModalOpen] = useState(false);
   const [ordersView, setOrdersView] = useState<"user" | "admin">("user");
@@ -52,11 +37,13 @@ export function Home() {
   const [pendingOrders, setPendingOrders] = useState<ApiOrder[]>([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [ordersError, setOrdersError] = useState<string | null>(null);
+  const [activeOrder, setActiveOrder] = useState<{ order: ApiOrder; messages: ApiOrderMessage[] } | null>(null);
   const [discountsModalOpen, setDiscountsModalOpen] = useState(false);
   const [discountsLoading, setDiscountsLoading] = useState(false);
   const [discountsError, setDiscountsError] = useState<string | null>(null);
-  const [activeDiscounts, setActiveDiscounts] = useState<ActiveDiscount[]>([]);
-  const [discountHistory, setDiscountHistory] = useState<DiscountHistoryItem[]>([]);
+  const [activeDiscounts, setActiveDiscounts] = useState<DiscountSnapshot["active"]>([]);
+  const [discountHistory, setDiscountHistory] = useState<DiscountSnapshot["history"]>([]);
+  const [shareCoupons, setShareCoupons] = useState<DiscountSnapshot["shareCoupons"]>([]);
   const [totalSavings, setTotalSavings] = useState(0);
   const [totalRedemptions, setTotalRedemptions] = useState(0);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
@@ -66,115 +53,13 @@ export function Home() {
   const [profileSuccess, setProfileSuccess] = useState<string | null>(null);
   const [profileValues, setProfileValues] = useState<ProfileFormValues | null>(null);
   const [profileStats, setProfileStats] = useState<ProfileStats | null>(null);
-  const [cachedDetail, setCachedDetail] = useState<ApiUserDetail | null>(null);
-  const [cachedEngagement, setCachedEngagement] = useState<ApiUserEngagement | null>(null);
-
-  const formatOrderCode = useCallback((orderNumber: number) => `PT-${orderNumber.toString().padStart(5, "0")}`, []);
-
-  const ensureUserData = useCallback(
-    async (force = false) => {
-      if (!backendUserId) return null;
-      if (!force && cachedDetail && cachedEngagement) {
-        return { detail: cachedDetail, engagement: cachedEngagement };
-      }
-      const [detail, engagement] = await Promise.all([
-        api.getUserDetail(backendUserId),
-        api.getUserEngagement(backendUserId),
-      ]);
-      setCachedDetail(detail);
-      setCachedEngagement(engagement);
-      return { detail, engagement };
-    },
-    [backendUserId, cachedDetail, cachedEngagement]
-  );
-
-  const processDiscounts = useCallback((detail: ApiUserDetail) => {
-    const now = Date.now();
-    const active = detail.discountCodesOwned.reduce<ActiveDiscount[]>((acc, code) => {
-      const uses = code.redemptions.length;
-      const usesRemaining = Math.max(code.maxRedemptions - uses, 0);
-      const expiresAt = code.expiresAt ?? undefined;
-      const isExpired = expiresAt ? new Date(expiresAt).getTime() < now : false;
-      if (usesRemaining <= 0 || isExpired) {
-        return acc;
-      }
-      acc.push({
-        id: code.id,
-        code: code.code,
-        label: code.type,
-        value: code.value,
-        percentage: code.percentage,
-        expiresAt,
-        usesRemaining,
-        totalUses: uses,
-      });
-      return acc;
-    }, []);
-
-    const history: DiscountHistoryItem[] = detail.discountRedemptions
-      .map((entry) => ({
-        id: entry.id,
-        code: entry.code?.code ?? entry.codeId,
-        valueApplied: parseFloat(entry.valueApplied ?? "0"),
-        redeemedAt: entry.redeemedAt,
-        orderCode: entry.order ? formatOrderCode(entry.order.number) : undefined,
-      }))
-      .sort((a, b) => new Date(b.redeemedAt).getTime() - new Date(a.redeemedAt).getTime());
-
-    const totalSavings = history.reduce((sum, item) => sum + item.valueApplied, 0);
-
-    return { active, history, totalSavings, totalRedemptions: history.length };
-  }, []);
-
-  const findProductById = useCallback((productId: string) => {
-    const numericId = Number(productId);
-    if (!Number.isNaN(numericId)) {
-      return (
-        COMBOS.find((combo) => combo.id === numericId) ??
-        INDIVIDUALES.find((combo) => combo.id === numericId)
-      );
-    }
-    return EXTRAS.find((extra) => String(extra.id) === productId);
-  }, []);
-
-  const buildProfileValues = useCallback((detail: ApiUserDetail): ProfileFormValues => {
-    const primary = detail.addresses.find((address) => address.isPrimary) ?? detail.addresses[0];
-    return {
-      email: detail.email,
-      firstName: detail.firstName ?? "",
-      lastName: detail.lastName ?? "",
-      displayName: detail.displayName ?? detail.firstName ?? "",
-      phone: detail.phone ?? "",
-      addressLine: primary?.line1 ?? "",
-      addressNotes: primary?.notes ?? "",
-    };
-  }, []);
+  const { ensureUserData } = useUserDataLoader(backendUserId);
+  const [cancelModalOpen, setCancelModalOpen] = useState(false);
+  const [cancelOrderId, setCancelOrderId] = useState<string | null>(null);
 
   const handleReorder = useCallback(
     (order: ApiOrder) => {
-      const items = order.metadata?.items ?? [];
-      if (items.length === 0) {
-        setOrdersError("No pudimos repetir este pedido porque falta la información original.");
-        return;
-      }
-
-      const matched = items.reduce<
-        Array<{ product: NonNullable<ReturnType<typeof findProductById>>; quantity: number; side?: string }>
-      >((acc, item) => {
-        if (!item.productId || item.quantity <= 0) {
-          return acc;
-        }
-        const product = findProductById(item.productId);
-        if (!product) {
-          return acc;
-        }
-        acc.push({
-          product,
-          quantity: item.quantity,
-          side: item.side ?? undefined,
-        });
-        return acc;
-      }, []);
+      const matched = mapOrderItemsToProducts(order);
 
       if (matched.length === 0) {
         setOrdersError("Algunos productos ya no están disponibles para repetir este pedido.");
@@ -188,7 +73,7 @@ export function Home() {
       setOrdersModalOpen(false);
       navigate("/checkout");
     },
-    [addItem, clearCart, findProductById, navigate]
+    [addItem, clearCart, navigate]
   );
 
   const startAsGuest = () => {
@@ -202,9 +87,16 @@ export function Home() {
   };
 
   const isAdmin = useMemo(
-    () => (user?.email ? user.email.toLowerCase() === "pollostellos.arg@gmail.com" : false),
+    () => (user?.email ? user.email.toLowerCase() === ADMIN_EMAIL : false),
     [user?.email]
   );
+
+  const hasActiveOrder = useMemo(() => {
+    if (!activeOrder) {
+      return false;
+    }
+    return !["CANCELLED", "FULFILLED"].includes(activeOrder.order.status);
+  }, [activeOrder]);
 
   useEffect(() => {
     if (isAdmin) {
@@ -213,6 +105,19 @@ export function Home() {
       setOrdersView("user");
     }
   }, [isAdmin]);
+
+  const loadActiveOrder = useCallback(async () => {
+    if (!backendUserId) {
+      setActiveOrder(null);
+      return;
+    }
+    try {
+      const response = await api.getActiveOrder(backendUserId, 50);
+      setActiveOrder(response);
+    } catch (error) {
+      console.error("No se pudo obtener el pedido activo", error);
+    }
+  }, [backendUserId]);
 
   const loadOrders = useCallback(async () => {
     if (!backendUserId && !isAdmin) {
@@ -232,19 +137,40 @@ export function Home() {
         setPendingOrders([]);
       }
       setOrdersError(null);
+      await loadActiveOrder();
     } catch (error) {
       console.error("No se pudieron cargar los pedidos", error);
       setOrdersError("No pudimos cargar los pedidos. Intentalo de nuevo en unos segundos.");
     } finally {
       setOrdersLoading(false);
     }
-  }, [backendUserId, isAdmin]);
+  }, [backendUserId, isAdmin, loadActiveOrder]);
 
   useEffect(() => {
     if (ordersModalOpen) {
       loadOrders();
     }
   }, [ordersModalOpen, loadOrders]);
+
+  useEffect(() => {
+    loadActiveOrder();
+  }, [loadActiveOrder]);
+
+  useEffect(() => {
+    if (isAdmin && user) {
+      navigate("/admin", { replace: true });
+    }
+  }, [isAdmin, user, navigate]);
+
+  useEffect(() => {
+    const state = (location.state as { openOrders?: boolean } | null) ?? null;
+    if (state?.openOrders) {
+      setOrdersView("user");
+      setOrdersModalOpen(true);
+      loadOrders();
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.state, location.pathname, loadOrders, navigate]);
 
   const loadDiscounts = useCallback(
     async (force = false) => {
@@ -261,6 +187,7 @@ export function Home() {
         const discountData = processDiscounts(data.detail);
         setActiveDiscounts(discountData.active);
         setDiscountHistory(discountData.history);
+        setShareCoupons(discountData.shareCoupons);
         setTotalSavings(discountData.totalSavings);
         setTotalRedemptions(discountData.totalRedemptions);
         setDiscountsError(null);
@@ -290,6 +217,7 @@ export function Home() {
         const discountData = processDiscounts(data.detail);
         setActiveDiscounts(discountData.active);
         setDiscountHistory(discountData.history);
+        setShareCoupons(discountData.shareCoupons);
         setTotalSavings(discountData.totalSavings);
         setTotalRedemptions(discountData.totalRedemptions);
         setProfileValues(profileForm);
@@ -320,6 +248,46 @@ export function Home() {
   const handleCloseOrders = () => {
     setOrdersModalOpen(false);
   };
+
+  const handleShareCoupon = useCallback(
+    async (coupon: DiscountSnapshot["shareCoupons"][number]) => {
+      if (!backendUserId) {
+        window.alert("Necesitás iniciar sesión para compartir tus códigos.");
+        return;
+      }
+
+      const message = `🔥 Probá Pollos Tello's y conseguí descuentos para tu próximo pedido. Usá mi código ${coupon.code} en https://www.pollostellos.com.ar`; // simple share text
+      const shareUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+
+      window.open(shareUrl, "_blank", "noopener,noreferrer");
+
+      try {
+        await api.activateShareCoupon(backendUserId, coupon.code);
+        await loadDiscounts(true);
+      } catch (error) {
+        console.error("No se pudo marcar el cupón como compartido", error);
+      }
+    },
+    [backendUserId, loadDiscounts]
+  );
+
+  const handleSendOrderMessage = useCallback(
+    async (orderId: string, message: string) => {
+      const text = message.trim();
+      if (!text) {
+        return;
+      }
+
+      try {
+        await api.createOrderMessage(orderId, text);
+        await loadActiveOrder();
+      } catch (error) {
+        console.error("No se pudo enviar el mensaje del pedido", error);
+        throw error;
+      }
+    },
+    [loadActiveOrder]
+  );
 
   const handleConfirmOrder = async (orderId: string) => {
     try {
@@ -356,15 +324,27 @@ export function Home() {
     setProfileSuccess(null);
   };
 
-  const handleCancelOrder = async (orderId: string) => {
-    const reason = window.prompt("¿Querés agregar un motivo?", "");
-    if (reason === null) {
+  const handleCloseCancelModal = () => {
+    setCancelModalOpen(false);
+    setCancelOrderId(null);
+  };
+
+  const handleRequestCancelOrder = (orderId: string) => {
+    setCancelOrderId(orderId);
+    setCancelModalOpen(true);
+  };
+
+  const handleConfirmCancelOrder = async (reason: string | null) => {
+    if (!cancelOrderId) {
+      setCancelModalOpen(false);
       return;
     }
     try {
       setOrdersLoading(true);
-      await api.cancelOrder(orderId, reason?.trim() ? reason.trim() : undefined);
+      await api.cancelOrder(cancelOrderId, reason ?? undefined);
       await loadOrders();
+      setCancelModalOpen(false);
+      setCancelOrderId(null);
     } catch (error) {
       console.error("No se pudo cancelar el pedido", error);
       setOrdersError("No pudimos cancelar el pedido. Probá nuevamente.");
@@ -404,26 +384,23 @@ export function Home() {
   };
 
   return (
-    <div className="grid" style={{ maxWidth: 560, margin: "24px auto", justifyItems: "center" }}>
-      <div className="home-casino-banner" aria-label="Beneficios de los combos">
-        
-        
-        <div className="home-casino-banner__inner">
-          <div className="home-casino-banner__track" role="presentation">
-            <span>TODOS NUESTROS COMBOS INCLUYEN ENTRADA · PRINCIPAL · POSTRE</span>
-            <span>TODOS NUESTROS COMBOS INCLUYEN ENTRADA · PRINCIPAL · POSTRE</span>
-            <span>TODOS NUESTROS COMBOS INCLUYEN ENTRADA · PRINCIPAL · POSTRE</span>
-          </div>
+    <div className="home-shell">
+      <div className="home-notice" aria-label="Beneficios de los combos">
+        <div className="home-notice__track" role="presentation">
+          <span>TODOS NUESTROS COMBOS: ENTRADA · PRINCIPAL · POSTRE</span>
+          <span>TODOS NUESTROS COMBOS: ENTRADA · PRINCIPAL · POSTRE</span>
+          <span>TODOS NUESTROS COMBOS: ENTRADA · PRINCIPAL · POSTRE</span>
         </div>
       </div>
-      <div className="card center auth-card home-hero">
-        <h1 className="home-hero__title">
-          <span className="home-hero__icon" aria-hidden>
-            🍗
-          </span>
-          <span>NUEVO PEDIDO</span>
-        </h1>
-        <p className="small home-hero__subtitle">Alta gastronomía sin espera</p>
+
+      <section className="card home-hero-card" aria-labelledby="home-hero-title">
+        <header className="home-hero-card__header">
+          <span className="home-hero-card__eyebrow">Delivery premium en el oeste</span>
+          <h1 id="home-hero-title" className="home-hero-card__title">
+            Nuevo pedido
+          </h1>
+          <p className="home-hero-card__subtitle">Alta gastronomía sin espera</p>
+        </header>
 
         <AccessActions
           user={user}
@@ -437,10 +414,15 @@ export function Home() {
           onOpenDiscounts={handleOpenDiscounts}
           onOpenProfile={handleOpenProfile}
           actionsDisabled={!backendUserId}
+          hasActiveOrder={hasActiveOrder}
         />
-      </div>
-      <div className="card center auth-card" style={{ padding: "24px 20px" }}>
-        <h2>Zona de reparto</h2>
+      </section>
+
+      <section className="card home-zone-card" aria-labelledby="home-zone-title">
+        <header className="home-zone-card__header">
+          <h2 id="home-zone-title">Zona de reparto</h2>
+          <p className="home-zone-card__copy">Entregamos en menos de 45 minutos en los barrios destacados.</p>
+        </header>
         <div className="zone-marquee" aria-label="Zonas disponibles">
           <div className="zone-marquee__track" aria-hidden>
             <span className="zone-marquee__item">CIUDADELA</span>
@@ -465,16 +447,10 @@ export function Home() {
           </div>
         </div>
         <div className="map-container" aria-label="Cobertura de reparto">
-          <iframe
-            title="Zona de reparto Pollos Tello's"
-            src="https://www.google.com/maps/embed?pb=!1m14!1m12!1m3!1d10647.59322850008!2d-58.53262697618754!3d-34.62290339114094!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!5e0!3m2!1ses-419!2sar!4v1758408103462!5m2!1ses-419!2sar"
-            loading="lazy"
-            referrerPolicy="no-referrer-when-downgrade"
-            allowFullScreen
-          />
-          <div className="radar-overlay" aria-hidden="true"></div>
+          <img src="/mapa.png" alt="Mapa de la zona de reparto de Pollos Tello's" draggable={false} />
+          <div className="radar-overlay" aria-hidden="true" />
         </div>
-      </div>
+      </section>
       <LoginModal open={loginOpen} onClose={() => setLoginOpen(false)} />
       <OrdersModal
         open={ordersModalOpen}
@@ -488,8 +464,12 @@ export function Home() {
         onViewChange={(view) => setOrdersView(view)}
         onRefresh={loadOrders}
         onConfirm={handleConfirmOrder}
-        onCancel={handleCancelOrder}
+        onCancel={handleRequestCancelOrder}
         onReorder={handleReorder}
+        onOpenAdminPanel={isAdmin ? () => navigate('/admin/pedidos') : undefined}
+        activeOrder={activeOrder}
+        onSendMessage={handleSendOrderMessage}
+        onRefreshActive={loadActiveOrder}
       />
       <DiscountsModal
         open={discountsModalOpen}
@@ -500,6 +480,8 @@ export function Home() {
         totalRedemptions={totalRedemptions}
         activeDiscounts={activeDiscounts}
         history={discountHistory}
+        shareCoupons={shareCoupons}
+        onShareCoupon={handleShareCoupon}
         onRefresh={() => loadDiscounts(true)}
       />
       <ProfileModal
@@ -512,6 +494,12 @@ export function Home() {
         initialValues={profileValues}
         stats={profileStats}
         onSubmit={handleSaveProfile}
+      />
+      <CancelOrderModal
+        open={cancelModalOpen}
+        loading={ordersLoading}
+        onClose={handleCloseCancelModal}
+        onConfirm={handleConfirmCancelOrder}
       />
     </div>
   );

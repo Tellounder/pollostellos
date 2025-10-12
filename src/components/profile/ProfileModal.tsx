@@ -181,6 +181,10 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                     <strong>{stats.lifetimeOrders}</strong>
                   </div>
                   <div>
+                    <span>Ventas netas acumuladas</span>
+                    <strong>{currencyFormatter.format(stats.lifetimeNetSales)}</strong>
+                  </div>
+                  <div>
                     <span>Ahorro total en descuentos</span>
                     <strong>{currencyFormatter.format(stats.discountUsage)}</strong>
                   </div>

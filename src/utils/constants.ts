@@ -15,7 +15,7 @@ export const COMBOS: Combo[] = [
     id: 1,
     name: "Combo 1",
     description: "1 Pollo  + Guarnición + 2 postrecitos de la casa",
-    price: 25000,
+    price: 26000,
     hasSide: true,
     sideOptions: [
       "Ensalada mixta",
@@ -28,7 +28,7 @@ export const COMBOS: Combo[] = [
     id: 2,
     name: "Combo 2",
     description: "2 Pollos  + Guarnición + 4 postrecitos de la casa",
-    price: 35000,
+    price: 38000,
     hasSide: true,
     sideOptions: [
       "Ensalada mixta",
@@ -59,7 +59,7 @@ export const EXTRAS: Extra[] = [
   { id:'deshuesado', label:'Servicio de deshuesado', price:3500, image: '/media/deshuesado.png' },
 ]
 
-export const WHATSAPP_NUMBER = '+5491130623998'
+export const WHATSAPP_NUMBER = '+5491135570199'
 
 export const INDIVIDUALES: Combo[] = [
   {

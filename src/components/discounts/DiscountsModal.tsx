@@ -1,5 +1,6 @@
 import React from "react";
 import { OverlayPortal } from "components/common/OverlayPortal";
+import type { ShareCouponSummary } from "utils/orders";
 
 type ActiveDiscount = {
   id: string;
@@ -29,6 +30,8 @@ type DiscountsModalProps = {
   totalRedemptions: number;
   activeDiscounts: ActiveDiscount[];
   history: DiscountHistoryItem[];
+  shareCoupons: ShareCouponSummary[];
+  onShareCoupon: (coupon: ShareCouponSummary) => Promise<void> | void;
   onRefresh: () => void;
 };
 
@@ -52,6 +55,8 @@ export const DiscountsModal: React.FC<DiscountsModalProps> = ({
   totalRedemptions,
   activeDiscounts,
   history,
+  shareCoupons,
+  onShareCoupon,
   onRefresh,
 }) => {
   React.useEffect(() => {
@@ -64,6 +69,19 @@ export const DiscountsModal: React.FC<DiscountsModalProps> = ({
   }, [open, onClose]);
 
   if (!open) return null;
+
+  const [sharingId, setSharingId] = React.useState<string | null>(null);
+
+  const handleShare = async (coupon: ShareCouponSummary) => {
+    try {
+      setSharingId(coupon.id);
+      await onShareCoupon(coupon);
+    } catch (error) {
+      console.error("No se pudo compartir el cupón", error);
+    } finally {
+      setSharingId(null);
+    }
+  };
 
   return (
     <OverlayPortal>
@@ -109,6 +127,45 @@ export const DiscountsModal: React.FC<DiscountsModalProps> = ({
             </div>
           ) : (
             <div className="discounts-content">
+              <section className="discounts-section" aria-labelledby="discounts-share">
+                <div className="orders-section__header">
+                  <h3 id="discounts-share">Códigos para compartir</h3>
+                </div>
+                {shareCoupons.length === 0 ? (
+                  <p className="orders-empty">
+                    Generamos tres códigos al mes para que compartas por WhatsApp y sumes beneficios. Tocá
+                    “Actualizar” si no ves los tuyos.
+                  </p>
+                ) : (
+                  <ul className="discounts-share-list">
+                    {shareCoupons.map((coupon) => (
+                      <li key={coupon.id} className={`discounts-share-item discounts-share-item--${coupon.status.toLowerCase()}`}>
+                        <div className="discounts-share-item__header">
+                          <strong>{coupon.code}</strong>
+                          <span>{formatCycle(coupon.year, coupon.month)}</span>
+                        </div>
+                        <div className="discounts-share-item__meta">
+                          <span>{resolveShareStatus(coupon)}</span>
+                          {coupon.activatedAt && (
+                            <span>Activado: {dateFormatter.format(new Date(coupon.activatedAt))}</span>
+                          )}
+                        </div>
+                        <div className="discounts-share-item__actions">
+                          <button
+                            type="button"
+                            className="btn-secondary btn-sm"
+                            disabled={coupon.status !== "ISSUED" || sharingId === coupon.id}
+                            onClick={() => handleShare(coupon)}
+                          >
+                            {sharingId === coupon.id ? "Compartiendo…" : "Compartir"}
+                          </button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+
               <section className="discounts-section" aria-labelledby="discounts-activos">
                 <div className="orders-section__header">
                   <h3 id="discounts-activos">Códigos activos</h3>
@@ -178,4 +235,24 @@ const resolveDiscountLabel = (code: ActiveDiscount) => {
     return `${parseFloat(code.percentage)}%`;
   }
   return currencyFormatter.format(parseFloat(code.value));
+};
+
+const cycleFormatter = new Intl.DateTimeFormat("es-AR", {
+  month: "long",
+  year: "numeric",
+});
+
+const formatCycle = (year: number, month: number) => {
+  return cycleFormatter.format(new Date(year, month - 1, 1));
+};
+
+const resolveShareStatus = (coupon: ShareCouponSummary) => {
+  switch (coupon.status) {
+    case "ACTIVATED":
+      return "Compartido";
+    case "REDEEMED":
+      return "Canjeado";
+    default:
+      return "Listo para compartir";
+  }
 };

@@ -35,8 +35,8 @@ const AVATARS = [
   Avatar11,
 ];
 
-const COMBO1_SPECIAL_PRICE = 24000;
-const COMBO2_ORIGINAL_PRICE = 48000;
+const COMBO1_SPECIAL_PRICE = 26000;
+const COMBO2_ORIGINAL_PRICE = 52000;
 
 type SliderMessage = {
   title: string;
@@ -188,53 +188,55 @@ const UserSection: React.FC = () => {
   const currentMessage = messages[messageIndex] ?? messages[0];
 
   const renderTicker = () => (
-    <div className="menu-intro__ticker" role="status" aria-live="polite">
-      <div className="menu-intro__message">
-        <strong className="menu-intro__message-title">{currentMessage.title}</strong>
-        <span className="menu-intro__message-body small">{currentMessage.body}</span>
+    <div className="menu-hero__ticker" role="status" aria-live="polite">
+      <div className="menu-hero__message">
+        <strong className="menu-hero__message-title">{currentMessage.title}</strong>
+        <span className="menu-hero__message-body">{currentMessage.body}</span>
         {currentMessage.ctaLabel && currentMessage.onCta && (
-          <button className="btn-secondary btn-sm menu-intro__message-cta" onClick={currentMessage.onCta}>
+          <button className="btn-soft btn-sm menu-hero__message-cta" onClick={currentMessage.onCta}>
             {currentMessage.ctaLabel}
           </button>
         )}
       </div>
-      {messages.length > 1 && (
-        <div className="menu-intro__ticker-dots">
-          {messages.map((_, index) => (
-            <span
-              key={index}
-              className={`menu-intro__ticker-dot ${messageIndex === index ? "is-active" : ""}`}
-            />
-          ))}
-        </div>
-      )}
+      
     </div>
   );
 
   if (!user) {
     return (
-      <div className="card menu-intro menu-intro--guest">
-        <h2 className="menu-intro__title">Armá tu pedido</h2>
+      <section className="card menu-hero menu-hero--guest">
+        <header className="menu-hero__header">
+          <span className="menu-hero__eyebrow">Primer pedido en segundos</span>
+          <h2 className="menu-hero__title">Armá tu pedido</h2>
+        </header>
         {renderTicker()}
-      </div>
+        <div className="menu-hero__actions">
+          <button className="btn-primary" type="button" onClick={login}>
+            Iniciar sesión con Google
+          </button>
+        </div>
+      </section>
     );
   }
 
   return (
-    <div className="card menu-intro menu-intro--user">
-      <div
-        className="menu-intro__avatar"
-        aria-hidden
-        style={avatarSrc ? { backgroundImage: `url(${avatarSrc})`, backgroundSize: "cover", backgroundPosition: "center" } : undefined}
-      />
-      <div className="menu-intro__content">
-        <h2 className="menu-intro__title">¡Hola, {user.displayName || "crack"}!</h2>
-        {renderTicker()}
+    <section className="card menu-hero menu-hero--user">
+      <div className="menu-hero__profile">
+        <div
+          className="menu-hero__avatar"
+          aria-hidden
+          style={avatarSrc ? { backgroundImage: `url(${avatarSrc})`, backgroundSize: "cover", backgroundPosition: "center" } : undefined}
+        />
+        <div className="menu-hero__content">
+          <span className="menu-hero__eyebrow">Progreso y sorpresas</span>
+          <h2 className="menu-hero__title">¡Hola, {user.displayName || "crack"}!</h2>
+          {renderTicker()}
+        </div>
       </div>
-      <button className="btn-ghost btn-sm menu-intro__logout" onClick={logout}>
+      <button className="btn-ghost btn-sm menu-hero__logout" onClick={logout}>
         Cerrar sesión
       </button>
-    </div>
+    </section>
   );
 };
 
@@ -291,61 +293,62 @@ export function Menu() {
   };
 
   return (
-    <section className="grid menu-view">
+    <div className="menu-shell">
       <UserSection />
-      <section className="menu-combos" aria-label="Combos disponibles">
-        <div className="menu-combos__header">
-          <h2 className="menu-combos__title">Elegí tu combo</h2>
-          <p className="small menu-combos__hint">Deslizá para ver todas las opciones</p>
-        </div>
-        <div className="menu-combos__slider" role="list">
+
+      <section className="menu-section" aria-label="Combos disponibles">
+        <header className="menu-section__header">
+          <div>
+            <span className="menu-section__eyebrow">Clásicos de la casa</span>
+            <h2 className="menu-section__title">Elegí tu combo</h2>
+          </div>
+          <p className="menu-section__hint">Deslizá para ver todas las opciones</p>
+        </header>
+        <div className="menu-section__slider menu-combos__slider" role="list">
           {combos.map(renderCombo)}
         </div>
       </section>
-      <section className="menu-combos" aria-label="Individuales disponibles">
-        <div className="menu-combos__header">
-          <h2 className="menu-combos__title">--- INDIVIDUALES ---</h2>
-          <p className="small menu-combos__hint">Deslizá para ver todas las opciones</p>
-        </div>
-        <div className="menu-combos__slider" role="list">
+
+      <section className="menu-section" aria-label="Individuales disponibles">
+        <header className="menu-section__header">
+          <div>
+            <span className="menu-section__eyebrow">Para completar tu mesa</span>
+            <h2 className="menu-section__title">Individuales</h2>
+          </div>
+          <p className="menu-section__hint">Deslizá para ver todas las opciones</p>
+        </header>
+        <div className="menu-section__slider menu-combos__slider" role="list">
           {INDIVIDUALES.map(renderCombo)}
         </div>
       </section>
+
       <ExtrasList />
-      <div className="card">
-        <div
-          className="row"
-          style={{ justifyContent: "space-between", width: "100%" }}
-        >
-          <button
-            className="btn-ghost"
-            onClick={() => navigate("/")}
-            aria-label="Volver al inicio"
-          >
+
+      <section className="card menu-nav">
+        <div className="menu-nav__body">
+          <h3 className="menu-nav__title">¿Listo para confirmar?</h3>
+          <p className="menu-nav__copy">Podés revisar el carrito antes de continuar al checkout.</p>
+        </div>
+        <div className="menu-nav__actions">
+          <button className="btn-ghost" onClick={() => navigate("/")} aria-label="Volver al inicio">
             Atrás
           </button>
-          <div className="row" style={{ marginLeft: "auto", gap: 10 }}>
-            <button
-              className="btn-primary"
-              aria-label="Ir a datos"
-              onClick={() => {
-                navigate("/checkout");
-              }}
-              disabled={!canCheckout}
-            >
-              Siguiente
-            </button>
-          </div>
+          <button
+            className="btn-primary"
+            aria-label="Ir al checkout"
+            onClick={() => navigate("/checkout")}
+            disabled={!canCheckout}
+          >
+            Ir al checkout
+          </button>
         </div>
-        <p className="small">
-          Podés abrir el carrito para revisar antes de continuar.
-        </p>
-      </div>
+      </section>
+
       <LockedComboModal
         open={lockedComboModalOpen}
         onClose={() => setLockedComboModalOpen(false)}
         onLogin={login}
       />
-    </section>
+    </div>
   );
 }

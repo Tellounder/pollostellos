@@ -303,16 +303,41 @@ const Checkout: React.FC = () => {
     resumePendingFocus();
   };
 
-  const openWhatsApp = () => {
+  const resolveWhatsAppUrl = () => {
     if (lastOrderRef) {
-      window.open(lastOrderRef.whatsappUrl, "_blank");
-      return;
+      return lastOrderRef.whatsappUrl;
     }
     const message = buildPedidoMessage();
-    window.open(waLink(WHATSAPP_NUMBER, message), "_blank");
+    return waLink(WHATSAPP_NUMBER, message);
+  };
+
+  const openWhatsApp = () => {
+    const url = resolveWhatsAppUrl();
+    const isIOS = /iphone|ipad|ipod/i.test(window.navigator.userAgent);
+
+    if (isIOS) {
+      window.location.href = url;
+    } else {
+      window.open(url, "_blank", "noopener,noreferrer");
+    }
   };
 
   const finalizeOrder = () => {
+    if (lastOrderRef) {
+      try {
+        window.sessionStorage.removeItem("pt_last_order_whatsapp");
+        window.sessionStorage.setItem(
+          "pt_last_order_context",
+          JSON.stringify({
+            whatsappUrl: lastOrderRef.whatsappUrl,
+            code: lastOrderRef.code,
+            number: lastOrderRef.number,
+          })
+        );
+      } catch (error) {
+        console.error("No se pudo guardar la última referencia de pedido", error);
+      }
+    }
     clearCart();
     setForm(initialForm);
     setLastOrderRef(null);
@@ -324,9 +349,15 @@ const Checkout: React.FC = () => {
     setBonusStage("countdown");
     setBonusCountdown(60);
     clearPendingBonus();
-    window.setTimeout(() => {
+    const isIOS = /iphone|ipad|ipod/i.test(window.navigator.userAgent);
+
+    if (isIOS) {
       openWhatsApp();
-    }, 400);
+    } else {
+      window.setTimeout(() => {
+        openWhatsApp();
+      }, 400);
+    }
     cleanupBonusTimers();
     bonusIntervalRef.current = window.setInterval(() => {
       setBonusCountdown((prev) => Math.max(prev - 1, 0));
@@ -491,19 +522,32 @@ const Checkout: React.FC = () => {
         },
         paymentMethod: form.paymentMethod,
         notes: accepted ? "Aceptó pollo deshuesado de cortesía." : undefined,
-        items: cartItems.map((item) => ({
-          productId: String((item as { id: string | number }).id),
-          label: "name" in item ? item.name : item.label,
-          quantity: item.qty,
-          unitPrice: Number(item.price.toFixed(2)),
-          lineTotal: Number((item.price * item.qty).toFixed(2)),
-          side: item.side,
-          type: "name" in item ? "combo" : "extra",
-          metadata:
-            "description" in item && item.description
-              ? { description: item.description as string }
-              : undefined,
-        })),
+        items: cartItems.map((item) => {
+          const metadata: Record<string, unknown> = {};
+          if ("description" in item && item.description) {
+            metadata.description = item.description as string;
+          }
+
+          if (
+            "originalPrice" in item &&
+            typeof item.originalPrice === "number" &&
+            item.originalPrice > item.price
+          ) {
+            metadata.originalUnitPrice = Number(item.originalPrice.toFixed(2));
+            metadata.discountValue = Number(((item.originalPrice - item.price) * item.qty).toFixed(2));
+          }
+
+          return {
+            productId: String((item as { id: string | number }).id),
+            label: "name" in item ? item.name : item.label,
+            quantity: item.qty,
+            unitPrice: Number(item.price.toFixed(2)),
+            lineTotal: Number((item.price * item.qty).toFixed(2)),
+            side: item.side,
+            type: "name" in item ? "combo" : "extra",
+            metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
+          };
+        }),
         totalGross: Number(total.toFixed(2)),
         totalNet: Number(total.toFixed(2)),
         metadata: {
@@ -895,6 +939,7 @@ const Checkout: React.FC = () => {
     <div ref={formTopRef} className="container checkout-shell">
       <div className="checkout-shell__inner">
         <header className="checkout-head">
+          <span className="checkout-head__eyebrow">Paso final</span>
           <h1 className="checkout-head__title">Confirmá tu pedido</h1>
           <p className="checkout-head__subtitle">
             Mandá el WhatsApp: tu pedido se prepara igual. Si volvés, acá te mostramos el estado y guardamos sorpresas para vos.

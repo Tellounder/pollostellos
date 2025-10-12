@@ -19,7 +19,7 @@ export const ComboCard: React.FC<Props> = ({
   onLockedClick
 }) => {
   const { addItem } = useCart();
-  const DEFAULT_LABEL = "Guarnición favorita";
+  const DEFAULT_LABEL = "GUARNICIÓN FAVORITA";
   const [selectedSide, setSelectedSide] = useState<string>("");
   const [quickLabel, setQuickLabel] = useState<string>(DEFAULT_LABEL);
   const selectRef = useRef<HTMLSelectElement | null>(null);
@@ -42,25 +42,40 @@ export const ComboCard: React.FC<Props> = ({
     if (!label) {
       return [DEFAULT_LABEL];
     }
-    if (label === DEFAULT_LABEL) {
-      return ["Guarnición", "favorita"];
+
+    const normalized = label === DEFAULT_LABEL ? DEFAULT_LABEL : label.trim();
+
+    if (normalized === DEFAULT_LABEL) {
+      return ["GUARNICIÓN", "FAVORITA"];
     }
-    if (label.length <= 18 || !label.includes(" ")) {
-      return [label];
+
+    if (normalized.length <= 18 || !normalized.includes(" ")) {
+      return [normalized];
     }
-    const words = label.split(" ");
+
+    const words = normalized.split(" ");
     const midpoint = Math.ceil(words.length / 2);
     const first = words.slice(0, midpoint).join(" ");
     const second = words.slice(midpoint).join(" ");
     return second ? [first, second] : [first];
   };
 
+  const hasDiscount = typeof originalPrice === "number" && originalPrice > effectivePrice;
+  const savingsValue = hasDiscount ? originalPrice - effectivePrice : 0;
+  const savingsPercent = hasDiscount ? Math.round((savingsValue / originalPrice) * 100) : 0;
+
   const priceElement = (
     <span className="combo-card__price">
-      {typeof originalPrice === "number" && (
+      {hasDiscount && (
         <span className="combo-card__price-original">{money(originalPrice)}</span>
       )}
       <span className="combo-card__price-current">{money(effectivePrice)}</span>
+      {hasDiscount && (
+        <span className="combo-card__savings" aria-label={`Ahorra ${money(savingsValue)} (${savingsPercent}% )`}>
+          Ahorra {money(savingsValue)}
+          {savingsPercent >= 5 ? ` · ${savingsPercent}%` : ""}
+        </span>
+      )}
     </span>
   );
 
@@ -108,12 +123,15 @@ export const ComboCard: React.FC<Props> = ({
     <article className={`combo-card${isLocked ? " combo-card--locked" : ""}`} aria-label={combo.name}>
       <header className="combo-card__header">
         <h3 className="combo-card__title">{combo.name}</h3>
-        {isLocked && (
-          <span className="combo-card__badge">
-            <span>Exclusivo</span>
-            <span>registrados</span>
-          </span>
-        )}
+        <div className="combo-card__badges">
+          
+          {isLocked && (
+            <span className="combo-card__badge">
+              <span>Exclusivo</span>
+              <span>registrados</span>
+            </span>
+          )}
+        </div>
       </header>
 
       {combo.image ? (

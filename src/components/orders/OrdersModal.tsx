@@ -1,6 +1,7 @@
 import React from "react";
 import { OverlayPortal } from "components/common/OverlayPortal";
-import type { ApiOrder } from "utils/api";
+import type { ApiOrder, ApiOrderMessage, OrderStatus } from "utils/api";
+import { canReorder, formatOrderCode } from "utils/orders";
 
 type OrdersModalProps = {
   open: boolean;
@@ -16,24 +17,19 @@ type OrdersModalProps = {
   onConfirm: (orderId: string) => void;
   onCancel: (orderId: string) => void;
   onReorder: (order: ApiOrder) => void;
+  onOpenAdminPanel?: () => void;
+  activeOrder?: { order: ApiOrder; messages: ApiOrderMessage[] } | null;
+  onSendMessage?: (orderId: string, message: string) => Promise<void>;
+  onRefreshActive?: () => void;
 };
 
 const statusLabels: Record<ApiOrder["status"], string> = {
   DRAFT: "Borrador",
   PENDING: "Pendiente",
+  PREPARING: "En preparación",
   CONFIRMED: "Confirmado",
   CANCELLED: "Cancelado",
   FULFILLED: "Entregado",
-};
-
-const canReorder = (order: ApiOrder) => {
-  if (order.status !== "CONFIRMED" && order.status !== "FULFILLED") {
-    return false;
-  }
-  if (!order.metadata?.items || order.metadata.items.length === 0) {
-    return false;
-  }
-  return order.metadata.items.every((item) => Boolean(item.productId) && item.quantity > 0);
 };
 
 const currencyFormatter = new Intl.NumberFormat("es-AR", {
@@ -47,7 +43,31 @@ const dateFormatter = new Intl.DateTimeFormat("es-AR", {
   timeStyle: "short",
 });
 
-const formatOrderCode = (orderNumber: number) => `PT-${orderNumber.toString().padStart(5, "0")}`;
+const ACTIVE_TIMELINE_ORDER: OrderStatus[] = ["PENDING", "PREPARING", "CONFIRMED", "FULFILLED"];
+
+type TimelineStepConfig = {
+  status: OrderStatus;
+  title: string;
+  description: string;
+};
+
+const TIMELINE_STEPS: TimelineStepConfig[] = [
+  {
+    status: "PENDING",
+    title: "Pendiente",
+    description: "Estamos validando tu pedido.",
+  },
+  {
+    status: "PREPARING",
+    title: "En preparación",
+    description: "Estamos preparando tus pollos a las brasas.",
+  },
+  {
+    status: "CONFIRMED",
+    title: "Confirmado",
+    description: "Tu pedido está listo para coordinar la entrega.",
+  },
+];
 
 export const OrdersModal: React.FC<OrdersModalProps> = ({
   open,
@@ -63,6 +83,10 @@ export const OrdersModal: React.FC<OrdersModalProps> = ({
   onConfirm,
   onCancel,
   onReorder,
+  onOpenAdminPanel,
+  activeOrder,
+  onSendMessage,
+  onRefreshActive,
 }) => {
   React.useEffect(() => {
     if (!open) {
@@ -82,6 +106,13 @@ export const OrdersModal: React.FC<OrdersModalProps> = ({
   }
 
   const showAdminSection = isAdmin && activeView === "admin";
+  const activeContent = activeOrder ? (
+    <ActiveOrderPanel
+      data={activeOrder}
+      onSendMessage={onSendMessage}
+      onRefresh={onRefreshActive ?? onRefresh}
+    />
+  ) : null;
 
   const viewerContent = (
     <section className="orders-section" aria-label="Pedidos recientes">
@@ -152,6 +183,13 @@ export const OrdersModal: React.FC<OrdersModalProps> = ({
           ))}
         </ul>
       )}
+      {onOpenAdminPanel && (
+        <div className="orders-admin-cta">
+          <button type="button" className="btn-primary btn-sm" onClick={onOpenAdminPanel}>
+            Ver en panel /admin
+          </button>
+        </div>
+      )}
     </section>
   ) : null;
 
@@ -208,6 +246,7 @@ export const OrdersModal: React.FC<OrdersModalProps> = ({
             </div>
           ) : (
             <div className="orders-content">
+              {activeContent}
               {viewerContent}
               {adminContent}
             </div>
@@ -222,6 +261,170 @@ export const OrdersModal: React.FC<OrdersModalProps> = ({
       </div>
     </OverlayPortal>
   );
+};
+
+type ActiveOrderPanelProps = {
+  data: { order: ApiOrder; messages: ApiOrderMessage[] };
+  onSendMessage?: (orderId: string, message: string) => Promise<void>;
+  onRefresh?: () => void;
+};
+
+const ActiveOrderPanel: React.FC<ActiveOrderPanelProps> = ({ data, onSendMessage, onRefresh }) => {
+  const { order, messages } = data;
+  const [message, setMessage] = React.useState("");
+  const [sending, setSending] = React.useState(false);
+
+  const isCancelled = order.status === "CANCELLED";
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!onSendMessage) {
+      return;
+    }
+    const text = message.trim();
+    if (!text) {
+      return;
+    }
+    try {
+      setSending(true);
+      await onSendMessage(order.id, text);
+      setMessage("");
+    } catch (error) {
+      console.error("No se pudo enviar el mensaje del pedido", error);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const statusState = resolveTimelineState(order.status);
+  const timeline = TIMELINE_STEPS.map((step) => ({
+    ...step,
+    state: statusState(step.status),
+  }));
+
+  return (
+    <section className="orders-section" aria-label="Pedido en curso">
+      <div className="orders-section__header">
+        <h3>Pedido en curso</h3>
+        <div className="orders-section__actions">
+          {onRefresh && (
+            <button className="btn-ghost btn-sm" type="button" onClick={onRefresh}>
+              Actualizar
+            </button>
+          )}
+        </div>
+      </div>
+      <article className={`active-order__card${isCancelled ? " is-cancelled" : ""}`}>
+        <OrderHeader order={order} />
+
+        {!isCancelled && (
+          <ul className="active-order__timeline">
+            {timeline.map((step) => (
+              <li key={step.status} className={`active-order__timeline-step active-order__timeline-step--${step.state}`}>
+                <span className="active-order__timeline-title">{step.title}</span>
+                <span className="active-order__timeline-desc">{step.description}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {isCancelled && (
+          <p className="active-order__cancelled">Este pedido fue cancelado. Si necesitás ayuda, dejá un mensaje al equipo.</p>
+        )}
+
+        <OrderDetails order={order} />
+
+        <OrderChat messages={messages} onSubmit={handleSubmit} message={message} setMessage={setMessage} sending={sending} />
+      </article>
+    </section>
+  );
+};
+
+type OrderChatProps = {
+  messages: ApiOrderMessage[];
+  onSubmit: (event: React.FormEvent) => void;
+  message: string;
+  setMessage: (text: string) => void;
+  sending: boolean;
+};
+
+const OrderChat: React.FC<OrderChatProps> = ({ messages, onSubmit, message, setMessage, sending }) => {
+  const items = messages
+    .map((entry) => ({
+      id: entry.id,
+      author: entry.authorType,
+      text: extractMessage(entry.payload),
+      createdAt: entry.createdAt,
+    }))
+    .filter((entry) => entry.text.length > 0);
+
+  return (
+    <div className="active-order__chat">
+      <div className="active-order__chat-header">
+        <h4>Chat con el equipo</h4>
+        <span>Respondemos desde el panel admin</span>
+      </div>
+      <div className="active-order__chat-messages">
+        {items.length === 0 ? (
+          <p className="active-order__chat-empty">Podés dejar una nota o consulta para el equipo.</p>
+        ) : (
+          <ul>
+            {items.map((entry) => (
+              <li key={entry.id} className={`active-order__chat-message active-order__chat-message--${entry.author.toLowerCase()}`}>
+                <span className="active-order__chat-text">{entry.text}</span>
+                <span className="active-order__chat-meta">{dateFormatter.format(new Date(entry.createdAt))}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+      <form className="active-order__chat-form" onSubmit={onSubmit}>
+        <label htmlFor="order-chat" className="sr-only">
+          Escribí un mensaje para el equipo
+        </label>
+        <textarea
+          id="order-chat"
+          rows={3}
+          value={message}
+          onChange={(event) => setMessage(event.target.value)}
+          placeholder="Ej: Podés avisarme cuando salga del horno?"
+          disabled={sending}
+        />
+        <div className="active-order__chat-actions">
+          <button className="btn-primary btn-sm" type="submit" disabled={sending || message.trim().length === 0}>
+            {sending ? "Enviando…" : "Enviar"}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+};
+
+const extractMessage = (payload: Record<string, unknown>): string => {
+  if (payload && typeof payload === "object" && !Array.isArray(payload)) {
+    const candidate = (payload as { message?: unknown }).message;
+    if (typeof candidate === "string") {
+      return candidate;
+    }
+  }
+  return "";
+};
+
+const resolveTimelineState = (current: OrderStatus) => {
+  const currentIndex = ACTIVE_TIMELINE_ORDER.indexOf(current);
+  return (stepStatus: OrderStatus) => {
+    const stepIndex = ACTIVE_TIMELINE_ORDER.indexOf(stepStatus);
+    if (current === "CANCELLED") {
+      return "todo";
+    }
+    if (currentIndex > stepIndex) {
+      return "done";
+    }
+    if (currentIndex === stepIndex) {
+      return "current";
+    }
+    return "todo";
+  };
 };
 
 const OrderHeader: React.FC<{ order: ApiOrder }> = ({ order }) => {
@@ -243,10 +446,19 @@ const OrderHeader: React.FC<{ order: ApiOrder }> = ({ order }) => {
 
 const OrderDetails: React.FC<{ order: ApiOrder }> = ({ order }) => {
   const meta = order.metadata;
-  const items = meta?.items ?? [];
+  const normalized = Array.isArray(order.normalizedItems) ? order.normalizedItems : [];
+  const items = normalized.length
+    ? normalized.map((item) => ({
+        label: item.label,
+        quantity: item.quantity,
+        lineTotal: item.lineTotal,
+        side: item.side ?? undefined,
+      }))
+    : meta?.items ?? [];
   const customerName = meta?.customer?.name ?? "";
   const address = meta?.delivery?.addressLine ?? "";
   const payment = meta?.paymentMethod ?? order.note ?? "";
+  const totalItems = items.reduce<number>((sum, item) => sum + (Number(item.quantity) || 0), 0);
 
   return (
     <div className="orders-item__body">
@@ -274,6 +486,12 @@ const OrderDetails: React.FC<{ order: ApiOrder }> = ({ order }) => {
             <dt>Total</dt>
             <dd>{currencyFormatter.format(order.totalNet ?? order.totalGross)}</dd>
           </div>
+          {totalItems > 0 && (
+            <div>
+              <dt>Ítems</dt>
+              <dd>{totalItems}</dd>
+            </div>
+          )}
         </dl>
       </div>
       {items.length > 0 && (
@@ -282,8 +500,9 @@ const OrderDetails: React.FC<{ order: ApiOrder }> = ({ order }) => {
             <li key={`${order.id}-${index}`}>
               <span className="orders-item__product-label">{item.label}</span>
               <span className="orders-item__product-meta">
-                x{item.quantity} — {currencyFormatter.format(item.lineTotal)}
+                x{item.quantity}
                 {item.side ? ` · ${item.side}` : ""}
+                {item.lineTotal ? ` — ${currencyFormatter.format(item.lineTotal)}` : ""}
               </span>
             </li>
           ))}

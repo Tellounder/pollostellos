@@ -161,3 +161,21 @@ export const logout = async () => {
   const { signOut } = await loadAuthModule();
   await signOut(auth);
 };
+
+export const getCurrentUser = async () => {
+  const auth = await getAuthInstance();
+  return auth.currentUser;
+};
+
+export const getIdToken = async (forceRefresh = false) => {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    return null;
+  }
+  try {
+    return await currentUser.getIdToken(forceRefresh);
+  } catch (error) {
+    console.error('No se pudo obtener el token de sesión', error);
+    return null;
+  }
+};

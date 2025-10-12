@@ -27,6 +27,15 @@
       ],
       "styles/*": [
         "styles/*"
+      ],
+      "pages/*": [
+        "pages/*"
+      ],
+      "store/*": [
+        "store/*"
+      ],
+      "config/*": [
+        "config/*"
       ]
     },
     "allowImportingTsExtensions": true,

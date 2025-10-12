@@ -4,6 +4,21 @@ import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
 import path from "path";
 
+const authHeaderCachePlugin = {
+  cacheWillUpdate: async ({ request, response }: { request: Request; response?: Response | null }) => {
+    if (request.headers.has("Authorization")) {
+      return null;
+    }
+    if (!response) {
+      return null;
+    }
+    if (response.status === 401 || response.status === 403) {
+      return null;
+    }
+    return response;
+  },
+};
+
 export default defineConfig({
   server: {
     host: true,
@@ -16,6 +31,7 @@ export default defineConfig({
       styles: path.resolve(__dirname, "src/styles"),
       pages: path.resolve(__dirname, "src/pages"),
       store: path.resolve(__dirname, "src/store"),
+      config: path.resolve(__dirname, "src/config"),
     },
   },
   plugins: [
@@ -58,6 +74,7 @@ export default defineConfig({
               cacheableResponse: {
                 statuses: [0, 200],
               },
+              plugins: [authHeaderCachePlugin],
             },
           },
         ],

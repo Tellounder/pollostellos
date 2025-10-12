@@ -25,6 +25,7 @@ dist-ssr
 
 # Archivos de entorno
 .env
+.env.local
 .env.production
 
 # Submódulo de la API
