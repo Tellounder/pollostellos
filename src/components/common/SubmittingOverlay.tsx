@@ -9,22 +9,15 @@ export const SubmittingOverlay: React.FC<{ active: boolean }> = ({ active }) => 
 
   return (
     <OverlayPortal>
-      <div className="bonus-overlay" role="status" aria-live="polite">
-        <div className="bonus-overlay__content bonus-modal">
-          <p className="bonus-overlay__eyebrow small" aria-hidden="true">
-            Preparando pedido
-          </p>
-        <div className="bonus-overlay__spinner" aria-hidden>
-          <div className="loader-ring">
-            <div></div>
-            <div></div>
-            <div></div>
-            <div></div>
+      <div className="bonus-overlay checkin-overlay" role="status" aria-live="polite">
+        <div className="bonus-overlay__content bonus-modal checkin-overlay__card">
+          <div className="checkin-overlay__icon" aria-hidden>
+            <span aria-hidden="true" role="img">
+              🍗
+            </span>
           </div>
-        </div>
-          <p className="small">
-            Abrimos WhatsApp con tu pedido preparado. Enviá el mensaje; si volvés, acá seguís el estado y encontrás tus beneficios.
-          </p>
+          <p className="checkin-overlay__title">Check in pollo</p>
+          <p className="checkin-overlay__subtitle">Cargando tu pedido…</p>
         </div>
       </div>
     </OverlayPortal>

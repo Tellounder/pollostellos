@@ -17,6 +17,8 @@ type OrdersModalProps = {
   onConfirm: (orderId: string) => void;
   onCancel: (orderId: string) => void;
   onReorder: (order: ApiOrder) => void;
+  onPrepare?: (orderId: string) => void;
+  onFulfill?: (orderId: string) => void;
   onOpenAdminPanel?: () => void;
   activeOrder?: { order: ApiOrder; messages: ApiOrderMessage[] } | null;
   onSendMessage?: (orderId: string, message: string) => Promise<void>;
@@ -27,9 +29,9 @@ const statusLabels: Record<ApiOrder["status"], string> = {
   DRAFT: "Borrador",
   PENDING: "Pendiente",
   PREPARING: "En preparación",
-  CONFIRMED: "Confirmado",
+  CONFIRMED: "En camino",
   CANCELLED: "Cancelado",
-  FULFILLED: "Entregado",
+  FULFILLED: "Completado",
 };
 
 const currencyFormatter = new Intl.NumberFormat("es-AR", {
@@ -64,8 +66,13 @@ const TIMELINE_STEPS: TimelineStepConfig[] = [
   },
   {
     status: "CONFIRMED",
-    title: "Confirmado",
-    description: "Tu pedido está listo para coordinar la entrega.",
+    title: "En camino",
+    description: "Coordinamos la entrega. Aguardá unos minutos.",
+  },
+  {
+    status: "FULFILLED",
+    title: "Completado",
+    description: "El pedido fue entregado y quedó registrado.",
   },
 ];
 
@@ -83,6 +90,8 @@ export const OrdersModal: React.FC<OrdersModalProps> = ({
   onConfirm,
   onCancel,
   onReorder,
+  onPrepare,
+  onFulfill,
   onOpenAdminPanel,
   activeOrder,
   onSendMessage,
@@ -128,18 +137,20 @@ export const OrdersModal: React.FC<OrdersModalProps> = ({
         <ul className="orders-list">
           {viewerOrders.map((order) => (
             <li key={order.id} className="orders-item">
-              <OrderHeader order={order} />
-              <OrderDetails order={order} />
-              <div className="orders-user-actions">
-                <button
-                  type="button"
-                  className="btn-secondary btn-sm"
-                  onClick={() => onReorder(order)}
-                  disabled={!canReorder(order)}
-                >
-                  Repetir pedido
-                </button>
-              </div>
+              <article className="orders-card orders-card--history">
+                <OrderHeader order={order} />
+                <OrderDetails order={order} />
+                <div className="orders-user-actions">
+                  <button
+                    type="button"
+                    className="btn-secondary btn-sm"
+                    onClick={() => onReorder(order)}
+                    disabled={!canReorder(order)}
+                  >
+                    Repetir pedido
+                  </button>
+                </div>
+              </article>
             </li>
           ))}
         </ul>
@@ -148,45 +159,55 @@ export const OrdersModal: React.FC<OrdersModalProps> = ({
   );
 
   const adminContent = showAdminSection ? (
-    <section className="orders-section" aria-label="Pedidos pendientes de confirmación">
+    <section className="orders-section" aria-label="Gestionar pedidos">
       <div className="orders-section__header">
-        <h3>Pendientes de confirmación</h3>
+        <h3>Gestionar pedidos</h3>
         <button className="btn-ghost btn-sm" type="button" onClick={onRefresh}>
           Actualizar
         </button>
       </div>
       {pendingOrders.length === 0 ? (
-        <p className="orders-empty">No hay pedidos pendientes.</p>
+        <p className="orders-empty">No hay pedidos pendientes por gestionar.</p>
       ) : (
         <ul className="orders-list orders-list--admin">
-          {pendingOrders.map((order) => (
-            <li key={order.id} className="orders-item orders-item--admin">
-              <OrderHeader order={order} />
-              <OrderDetails order={order} />
-              <div className="orders-admin-actions">
-                <button
-                  type="button"
-                  className="btn-secondary btn-sm"
-                  onClick={() => onConfirm(order.id)}
-                >
-                  Confirmar
-                </button>
-                <button
-                  type="button"
-                  className="btn-ghost btn-sm"
-                  onClick={() => onCancel(order.id)}
-                >
-                  Cancelar
-                </button>
-              </div>
-            </li>
-          ))}
+          {pendingOrders.map((order) => {
+            const adminActions: Array<{ key: string; label: string; variant: "primary" | "secondary" | "ghost"; onClick: () => void }> = [];
+            if (onPrepare) {
+              adminActions.push({ key: "prepare", label: "Preparar", variant: "secondary", onClick: () => onPrepare(order.id) });
+            }
+            adminActions.push({ key: "confirm", label: "Confirmar", variant: "primary", onClick: () => onConfirm(order.id) });
+            if (onFulfill) {
+              adminActions.push({ key: "fulfill", label: "Completar", variant: "secondary", onClick: () => onFulfill(order.id) });
+            }
+            adminActions.push({ key: "cancel", label: "Cancelar", variant: "ghost", onClick: () => onCancel(order.id) });
+
+            return (
+              <li key={order.id} className="orders-item orders-item--admin">
+                <article className="orders-card">
+                  <OrderHeader order={order} />
+                  <OrderDetails order={order} />
+                  <div className="orders-admin-actions">
+                    {adminActions.map((action) => (
+                      <button
+                        key={action.key}
+                        type="button"
+                        className={`btn-${action.variant} btn-sm`}
+                        onClick={action.onClick}
+                      >
+                        {action.label}
+                      </button>
+                    ))}
+                  </div>
+                </article>
+              </li>
+            );
+          })}
         </ul>
       )}
       {onOpenAdminPanel && (
         <div className="orders-admin-cta">
           <button type="button" className="btn-primary btn-sm" onClick={onOpenAdminPanel}>
-            Ver en panel /admin
+            Ver más en /admin
           </button>
         </div>
       )}
@@ -245,10 +266,12 @@ export const OrdersModal: React.FC<OrdersModalProps> = ({
               <span>Cargando pedidos...</span>
             </div>
           ) : (
-            <div className="orders-content">
-              {activeContent}
-              {viewerContent}
-              {adminContent}
+            <div className={`orders-layout${activeContent ? " orders-layout--with-active" : ""}`}>
+              {activeContent && <aside className="orders-layout__aside">{activeContent}</aside>}
+              <div className="orders-layout__main">
+                {viewerContent}
+                {adminContent}
+              </div>
             </div>
           )}
 
@@ -314,7 +337,7 @@ const ActiveOrderPanel: React.FC<ActiveOrderPanelProps> = ({ data, onSendMessage
           )}
         </div>
       </div>
-      <article className={`active-order__card${isCancelled ? " is-cancelled" : ""}`}>
+      <article className={`orders-card orders-card--active${isCancelled ? " is-cancelled" : ""}`}>
         <OrderHeader order={order} />
 
         {!isCancelled && (

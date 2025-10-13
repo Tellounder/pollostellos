@@ -254,7 +254,10 @@ export function Menu() {
 
   const combos = useMemo(() => {
     if (isGuest) {
-      return COMBOS.filter((combo) => combo.id === 1 || combo.id === 2);
+      const guestOrder = [1, 3, 2];
+      return COMBOS.filter((combo) => guestOrder.includes(combo.id)).sort(
+        (a, b) => guestOrder.indexOf(a.id) - guestOrder.indexOf(b.id)
+      );
     }
     return COMBOS;
   }, [isGuest]);
@@ -304,6 +307,11 @@ export function Menu() {
           </div>
           <p className="menu-section__hint">Deslizá para ver todas las opciones</p>
         </header>
+        {isGuest && (
+          <p className="menu-section__guest-hint" role="note">
+            Invitados pueden repetir el Combo 1 y el Menú Infantil. Registrate para desbloquear el Combo Familiar.
+          </p>
+        )}
         <div className="menu-section__slider menu-combos__slider" role="list">
           {combos.map(renderCombo)}
         </div>

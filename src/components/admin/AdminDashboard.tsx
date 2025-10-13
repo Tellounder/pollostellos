@@ -29,7 +29,9 @@ type AdminDashboardProps = {
   pendingOrders: ApiOrder[];
   recentOrders: ApiOrder[];
   onRefresh: () => void;
+  onPrepare?: (orderId: string) => void;
   onConfirm: (orderId: string) => void;
+  onFulfill?: (orderId: string) => void;
   onCancel: (orderId: string) => void;
   onOpenOrdersModal: () => void;
   onOpenManageModal: () => void;
@@ -45,7 +47,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   pendingOrders,
   recentOrders,
   onRefresh,
+  onPrepare,
   onConfirm,
+  onFulfill,
   onCancel,
   onOpenOrdersModal,
   onOpenManageModal,
@@ -198,6 +202,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         )}
                       </div>
                       <div className="admin-orders__actions">
+                        {onPrepare && (
+                          <button
+                            type="button"
+                            className="btn-secondary btn-sm"
+                            onClick={() => onPrepare(order.id)}
+                          >
+                            Preparar
+                          </button>
+                        )}
                         <button
                           type="button"
                           className="btn-primary btn-sm"
@@ -205,6 +218,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         >
                           Confirmar
                         </button>
+                        {onFulfill && (
+                          <button
+                            type="button"
+                            className="btn-secondary btn-sm"
+                            onClick={() => onFulfill(order.id)}
+                          >
+                            Completar
+                          </button>
+                        )}
                         <button
                           type="button"
                           className="btn-ghost btn-sm"

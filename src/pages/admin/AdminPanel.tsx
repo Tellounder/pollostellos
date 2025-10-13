@@ -209,6 +209,33 @@ export function AdminPanel() {
     }
   };
 
+
+  const handlePrepareOrder = async (orderId: string) => {
+    try {
+      setOrdersLoading(true);
+      await api.prepareOrder(orderId);
+      await loadOrders();
+    } catch (error) {
+      console.error("No se pudo pasar el pedido a preparación", error);
+      setOrdersError("No pudimos pasar el pedido a preparación.");
+      setOrdersLoading(false);
+    }
+  };
+
+  const handleFulfillOrder = async (orderId: string) => {
+    try {
+      setOrdersLoading(true);
+      await api.fulfillOrder(orderId);
+      await loadOrders();
+    } catch (error) {
+      console.error("No se pudo completar el pedido", error);
+      setOrdersError("No pudimos marcar el pedido como completado.");
+      setOrdersLoading(false);
+    }
+  };
+
+
+
   const handleRequestCancelOrder = (orderId: string) => {
     setCancelOrderId(orderId);
     setCancelModalOpen(true);
@@ -304,7 +331,9 @@ export function AdminPanel() {
         pendingOrders={pendingOrders}
         recentOrders={recentOrders}
         onRefresh={loadOrders}
+        onPrepare={handlePrepareOrder}
         onConfirm={handleConfirmOrder}
+        onFulfill={handleFulfillOrder}
         onCancel={handleRequestCancelOrder}
         onOpenOrdersModal={() => handleOpenOrdersModal("user")}
         onOpenManageModal={() => handleOpenOrdersModal("admin")}
@@ -323,7 +352,9 @@ export function AdminPanel() {
         activeView={ordersView}
         onViewChange={(view) => setOrdersView(view)}
         onRefresh={loadOrders}
+        onPrepare={handlePrepareOrder}
         onConfirm={handleConfirmOrder}
+        onFulfill={handleFulfillOrder}
         onCancel={handleRequestCancelOrder}
         onReorder={handleReorder}
       />

@@ -99,20 +99,6 @@ export const DiscountsModal: React.FC<DiscountsModalProps> = ({
             </button>
           </header>
 
-          <div className="discounts-summary">
-            <div>
-              <span className="discounts-summary__label">Ahorro total</span>
-              <strong className="discounts-summary__value">{currencyFormatter.format(totalSavings)}</strong>
-            </div>
-            <div>
-              <span className="discounts-summary__label">Canjes realizados</span>
-              <strong className="discounts-summary__value">{totalRedemptions}</strong>
-            </div>
-            <button className="btn-ghost btn-sm" type="button" onClick={onRefresh}>
-              Actualizar
-            </button>
-          </div>
-
           {error && <p className="orders-error">{error}</p>}
 
           {loading ? (
@@ -126,99 +112,116 @@ export const DiscountsModal: React.FC<DiscountsModalProps> = ({
               <span>Cargando descuentos…</span>
             </div>
           ) : (
-            <div className="discounts-content">
-              <section className="discounts-section" aria-labelledby="discounts-share">
-                <div className="orders-section__header">
-                  <h3 id="discounts-share">Códigos para compartir</h3>
+            <div className="discounts-layout">
+              <aside className="discounts-column discounts-column--summary">
+                <div className="discount-card discounts-card--summary">
+                  <div className="discount-card__header">
+                    <h3>Resumen</h3>
+                    <button className="btn-ghost btn-sm" type="button" onClick={onRefresh}>
+                      Actualizar
+                    </button>
+                  </div>
+                  <div className="discount-summary__grid">
+                    <div>
+                      <span className="discount-summary__label">Ahorro total</span>
+                      <strong className="discount-summary__value">{currencyFormatter.format(totalSavings)}</strong>
+                    </div>
+                    <div>
+                      <span className="discount-summary__label">Canjes realizados</span>
+                      <strong className="discount-summary__value">{totalRedemptions}</strong>
+                    </div>
+                  </div>
                 </div>
-                {shareCoupons.length === 0 ? (
-                  <p className="orders-empty">
-                    Generamos tres códigos al mes para que compartas por WhatsApp y sumes beneficios. Tocá
-                    “Actualizar” si no ves los tuyos.
-                  </p>
-                ) : (
-                  <ul className="discounts-share-list">
-                    {shareCoupons.map((coupon) => (
-                      <li key={coupon.id} className={`discounts-share-item discounts-share-item--${coupon.status.toLowerCase()}`}>
-                        <div className="discounts-share-item__header">
-                          <strong>{coupon.code}</strong>
-                          <span>{formatCycle(coupon.year, coupon.month)}</span>
-                        </div>
-                        <div className="discounts-share-item__meta">
-                          <span>{resolveShareStatus(coupon)}</span>
-                          {coupon.activatedAt && (
-                            <span>Activado: {dateFormatter.format(new Date(coupon.activatedAt))}</span>
-                          )}
-                        </div>
-                        <div className="discounts-share-item__actions">
-                          <button
-                            type="button"
-                            className="btn-secondary btn-sm"
-                            disabled={coupon.status !== "ISSUED" || sharingId === coupon.id}
-                            onClick={() => handleShare(coupon)}
-                          >
-                            {sharingId === coupon.id ? "Compartiendo…" : "Compartir"}
-                          </button>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </section>
 
-              <section className="discounts-section" aria-labelledby="discounts-activos">
-                <div className="orders-section__header">
-                  <h3 id="discounts-activos">Códigos activos</h3>
-                </div>
-                {activeDiscounts.length === 0 ? (
-                  <p className="orders-empty">Hoy no tenés descuentos activos. ¡Seguí sumando pedidos y referidos!</p>
-                ) : (
-                  <ul className="discounts-list">
-                    {activeDiscounts.map((code) => (
-                      <li key={code.id} className="discounts-item">
-                        <div className="discounts-item__header">
-                          <strong>{code.code}</strong>
-                          <span className="discounts-item__value">{resolveDiscountLabel(code)}</span>
-                        </div>
-                        <div className="discounts-item__meta">
-                          <span>Usos restantes: {code.usesRemaining}</span>
-                          <span>Canjes totales: {code.totalUses}</span>
-                          {code.expiresAt && (
-                            <span>Vence: {dateFormatter.format(new Date(code.expiresAt))}</span>
-                          )}
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </section>
+                <section className="discount-card" aria-labelledby="discounts-share">
+                  <div className="discount-card__header">
+                    <h3 id="discounts-share">Códigos para compartir</h3>
+                  </div>
+                  {shareCoupons.length === 0 ? (
+                    <p className="orders-empty">
+                      Generamos tres códigos al mes para que compartas por WhatsApp y sumes beneficios. Tocá “Actualizar” si no ves los tuyos.
+                    </p>
+                  ) : (
+                    <ul className="discounts-share-list">
+                      {shareCoupons.map((coupon) => (
+                        <li key={coupon.id} className={`discounts-share-item discounts-share-item--${coupon.status.toLowerCase()}`}>
+                          <div className="discounts-share-item__header">
+                            <strong>{coupon.code}</strong>
+                            <span>{formatCycle(coupon.year, coupon.month)}</span>
+                          </div>
+                          <div className="discounts-share-item__meta">
+                            <span>{resolveShareStatus(coupon)}</span>
+                            {coupon.activatedAt && <span>Activado: {dateFormatter.format(new Date(coupon.activatedAt))}</span>}
+                          </div>
+                          <div className="discounts-share-item__actions">
+                            <button
+                              type="button"
+                              className="btn-secondary btn-sm"
+                              disabled={coupon.status !== "ISSUED" || sharingId === coupon.id}
+                              onClick={() => handleShare(coupon)}
+                            >
+                              {sharingId === coupon.id ? "Compartiendo…" : "Compartir"}
+                            </button>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </section>
+              </aside>
 
-              <section className="discounts-section" aria-labelledby="discounts-historial">
-                <div className="orders-section__header">
-                  <h3 id="discounts-historial">Historial de ahorros</h3>
-                </div>
-                {history.length === 0 ? (
-                  <p className="orders-empty">Todavía no aplicaste descuentos. Cuando lo hagas, los verás acá.</p>
-                ) : (
-                  <ul className="discounts-history">
-                    {history.map((item) => (
-                      <li key={item.id} className="discounts-history__item">
-                        <div>
-                          <strong>{item.code}</strong>
-                          <span>{dateFormatter.format(new Date(item.redeemedAt))}</span>
-                        </div>
-                        <div>
-                          <span>Ahorro: {currencyFormatter.format(item.valueApplied)}</span>
-                          {item.orderCode && <span>Pedido {item.orderCode}</span>}
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </section>
+              <div className="discounts-column">
+                <section className="discount-card" aria-labelledby="discounts-activos">
+                  <div className="discount-card__header">
+                    <h3 id="discounts-activos">Códigos activos</h3>
+                  </div>
+                  {activeDiscounts.length === 0 ? (
+                    <p className="orders-empty">Hoy no tenés descuentos activos. ¡Seguí sumando pedidos y referidos!</p>
+                  ) : (
+                    <ul className="discounts-list">
+                      {activeDiscounts.map((code) => (
+                        <li key={code.id} className="discounts-item">
+                          <div className="discounts-item__header">
+                            <strong>{code.code}</strong>
+                            <span className="discounts-item__value">{resolveDiscountLabel(code)}</span>
+                          </div>
+                          <div className="discounts-item__meta">
+                            <span>Usos restantes: {code.usesRemaining}</span>
+                            <span>Canjes totales: {code.totalUses}</span>
+                            {code.expiresAt && <span>Vence: {dateFormatter.format(new Date(code.expiresAt))}</span>}
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </section>
+
+                <section className="discount-card" aria-labelledby="discounts-historial">
+                  <div className="discount-card__header">
+                    <h3 id="discounts-historial">Historial de ahorros</h3>
+                  </div>
+                  {history.length === 0 ? (
+                    <p className="orders-empty">Todavía no aplicaste descuentos. Cuando lo hagas, los verás acá.</p>
+                  ) : (
+                    <ul className="discounts-history">
+                      {history.map((item) => (
+                        <li key={item.id} className="discounts-history__item">
+                          <div>
+                            <strong>{item.code}</strong>
+                            <span>{dateFormatter.format(new Date(item.redeemedAt))}</span>
+                          </div>
+                          <div>
+                            <span>Ahorro: {currencyFormatter.format(item.valueApplied)}</span>
+                            {item.orderCode && <span>Pedido {item.orderCode}</span>}
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </section>
+              </div>
             </div>
           )}
-
           <footer className="orders-modal__footer">
             <button className="btn-primary" type="button" onClick={onClose}>
               Listo

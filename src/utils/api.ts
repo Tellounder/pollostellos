@@ -177,6 +177,14 @@ export const api = {
     });
   },
 
+
+  async fulfillOrder(orderId: string) {
+    return request<ApiOrder>(`/orders/${orderId}/fulfill`, {
+      method: 'PATCH',
+      authMode: 'required',
+    });
+  },
+
   async cancelOrder(orderId: string, reason?: string) {
     return request<ApiOrder>(`/orders/${orderId}/cancel`, {
       method: 'PATCH',
@@ -284,7 +292,9 @@ export type ApiOrder = {
   createdAt: string;
   updatedAt: string;
   placedAt?: string | null;
+  preparingAt?: string | null;
   confirmedAt?: string | null;
+  fulfilledAt?: string | null;
   cancelledAt?: string | null;
   cancellationReason?: string | null;
   note?: string | null;
