@@ -1,6 +1,7 @@
 import { getIdToken } from './firebase';
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
+const API_KEY = import.meta.env.VITE_API_KEY;
 
 type AuthMode = 'none' | 'optional' | 'required';
 
@@ -31,6 +32,10 @@ async function request<T>(path: string, options: FetchOptions = {}): Promise<T> 
     } else {
       headers.set('Authorization', `Bearer ${token}`);
     }
+  }
+
+  if (API_KEY) {
+    headers.set('x-api-key', API_KEY);
   }
 
   const response = await fetch(url, {

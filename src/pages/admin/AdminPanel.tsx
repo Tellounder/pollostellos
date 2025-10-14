@@ -1,4 +1,4 @@
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { type FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "hooks/useAuth";
 import {
   api,
@@ -260,7 +260,7 @@ export function AdminPanel({ initialSection = "orders" }: AdminPanelProps) {
   );
 
   const runOrderAction = useCallback(
-    async (orderId: string, task: () => Promise<void>, failure: string) => {
+    async (orderId: string, task: () => Promise<ApiOrder | void>, failure: string) => {
       setActionLoadingId(orderId);
       try {
         await task();
