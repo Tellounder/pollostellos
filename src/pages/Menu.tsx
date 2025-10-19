@@ -8,7 +8,6 @@ import type { Combo } from "utils/constants";
 import { ComboCard } from "components/products/ComboCard";
 import { ExtrasList } from "components/products/ExtrasList";
 import { OverlayPortal } from "components/common/OverlayPortal";
-import useScrollLock from "hooks/useScrollLock";
 import Avatar1 from "../assets/avatar/av1.svg";
 import Avatar2 from "../assets/avatar/av2.svg";
 import Avatar3 from "../assets/avatar/av3.svg";
@@ -50,8 +49,6 @@ const LockedComboModal: React.FC<{
   onClose: () => void;
   onLogin: () => void;
 }> = ({ open, onClose, onLogin }) => {
-  useScrollLock(open);
-
   if (!open) {
     return null;
   }

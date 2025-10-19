@@ -348,10 +348,17 @@ export type OrderMetadata = {
   }>;
   notes?: string | null;
   extra?: Record<string, unknown> | null;
+  appliedDiscount?: {
+    code: string;
+    amount: number;
+    label?: string | null;
+    description?: string | null;
+  } | null;
 };
 
 export type CreateOrderPayload = {
   userId?: string;
+  discountCode?: string;
   customerName: string;
   customerEmail: string;
   customerPhone?: string;

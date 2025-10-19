@@ -80,30 +80,29 @@ const getProvider = async () => {
   return providerCache;
 };
 
-const canUseSessionStorage = () => {
-  if (typeof window === "undefined") return false;
-  try {
-    const testKey = "__pt_storage_probe";
-    window.sessionStorage.setItem(testKey, "1");
-    window.sessionStorage.removeItem(testKey);
-    return true;
-  } catch (error) {
+const shouldUseRedirect = () => {
+  if (typeof window === "undefined") {
     return false;
   }
-};
 
-const shouldUseRedirect = () => {
-  if (typeof window === "undefined") return false;
+  const { protocol, hostname } = window.location;
+  const isSecure = protocol === "https:" || window.isSecureContext;
+  const isLocalhost = hostname === "localhost" || hostname === "127.0.0.1" || hostname === "[::1]";
+  const isIpAddress = /^\d{1,3}(?:\.\d{1,3}){3}$/.test(hostname);
+
+  if (!isSecure && !isLocalhost) {
+    return true;
+  }
+
+  if (isIpAddress && !isSecure) {
+    return true;
+  }
 
   const ua = window.navigator.userAgent.toLowerCase();
   const isSamsungBrowser = ua.includes("samsungbrowser");
   const isWebView = ua.includes("wv;") || ua.includes("line") || ua.includes("instagram");
 
-  if (isSamsungBrowser || isWebView) {
-    return canUseSessionStorage();
-  }
-
-  return false;
+  return isSamsungBrowser || isWebView;
 };
 
 export const getRedirectResultSafe = async () => {

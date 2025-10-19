@@ -1,5 +1,4 @@
 import React, { useEffect, useRef } from "react";
-import useScrollLock from "hooks/useScrollLock";
 import { OverlayPortal } from "components/common/OverlayPortal";
 
 interface Props {
@@ -10,7 +9,6 @@ interface Props {
 export const BonusCountdownOverlay: React.FC<Props> = ({ active, seconds }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
-  useScrollLock(active);
 
   useEffect(() => {
     if (!active || typeof document === "undefined") {

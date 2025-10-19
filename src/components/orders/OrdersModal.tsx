@@ -2,6 +2,9 @@ import React from "react";
 import { OverlayPortal } from "components/common/OverlayPortal";
 import type { ApiOrder, ApiOrderMessage, OrderStatus } from "utils/api";
 import { canReorder, formatOrderCode } from "utils/orders";
+import styles from "./OrdersModal.module.css";
+
+const cx = (...classes: Array<string | false | null | undefined>) => classes.filter(Boolean).join(" ");
 
 type OrdersModalProps = {
   open: boolean;
@@ -32,6 +35,15 @@ const statusLabels: Record<ApiOrder["status"], string> = {
   CONFIRMED: "En camino",
   CANCELLED: "Cancelado",
   FULFILLED: "Completado",
+};
+
+const statusClassMap: Record<OrderStatus, string> = {
+  DRAFT: styles.statusDraft,
+  PENDING: styles.statusPending,
+  PREPARING: styles.statusPreparing,
+  CONFIRMED: styles.statusConfirmed,
+  CANCELLED: styles.statusCancelled,
+  FULFILLED: styles.statusFulfilled,
 };
 
 const currencyFormatter = new Intl.NumberFormat("es-AR", {
@@ -124,23 +136,23 @@ export const OrdersModal: React.FC<OrdersModalProps> = ({
   ) : null;
 
   const viewerContent = (
-    <section className="orders-section" aria-label="Pedidos recientes">
-      <div className="orders-section__header">
+    <section className={styles.section} aria-label="Pedidos recientes">
+      <div className={styles.sectionHeader}>
         <h3>Pedidos recientes</h3>
         <button className="btn-ghost btn-sm" type="button" onClick={onRefresh}>
           Actualizar
         </button>
       </div>
       {viewerOrders.length === 0 ? (
-        <p className="orders-empty">Todavía no registramos pedidos confirmados.</p>
+        <p className={styles.empty}>Todavía no registramos pedidos confirmados.</p>
       ) : (
-        <ul className="orders-list">
+        <ul className={styles.list}>
           {viewerOrders.map((order) => (
-            <li key={order.id} className="orders-item">
-              <article className="orders-card orders-card--history">
+            <li key={order.id} className={styles.item}>
+              <article className={cx(styles.card, styles.historyCard)}>
                 <OrderHeader order={order} />
                 <OrderDetails order={order} />
-                <div className="orders-user-actions">
+                <div className={styles.userActions}>
                   <button
                     type="button"
                     className="btn-secondary btn-sm"
@@ -159,34 +171,34 @@ export const OrdersModal: React.FC<OrdersModalProps> = ({
   );
 
   const adminContent = showAdminSection ? (
-    <section className="orders-section" aria-label="Gestionar pedidos">
-      <div className="orders-section__header">
+    <section className={styles.section} aria-label="Gestionar pedidos">
+      <div className={styles.sectionHeader}>
         <h3>Gestionar pedidos</h3>
         <button className="btn-ghost btn-sm" type="button" onClick={onRefresh}>
           Actualizar
         </button>
       </div>
       {pendingOrders.length === 0 ? (
-        <p className="orders-empty">No hay pedidos pendientes por gestionar.</p>
+        <p className={styles.empty}>No hay pedidos pendientes por gestionar.</p>
       ) : (
-        <ul className="orders-list orders-list--admin">
+        <ul className={cx(styles.list, styles.listAdmin)}>
           {pendingOrders.map((order) => {
             const adminActions: Array<{ key: string; label: string; variant: "primary" | "secondary" | "ghost"; onClick: () => void }> = [];
             if (onPrepare) {
-              adminActions.push({ key: "prepare", label: "Preparar", variant: "secondary", onClick: () => onPrepare(order.id) });
+              adminActions.push({ key: "prepare", label: "Tomar pedido", variant: "secondary", onClick: () => onPrepare(order.id) });
             }
-            adminActions.push({ key: "confirm", label: "Confirmar", variant: "primary", onClick: () => onConfirm(order.id) });
+            adminActions.push({ key: "confirm", label: "Listo para entregar", variant: "primary", onClick: () => onConfirm(order.id) });
             if (onFulfill) {
-              adminActions.push({ key: "fulfill", label: "Completar", variant: "secondary", onClick: () => onFulfill(order.id) });
+              adminActions.push({ key: "fulfill", label: "Pedido entregado", variant: "secondary", onClick: () => onFulfill(order.id) });
             }
-            adminActions.push({ key: "cancel", label: "Cancelar", variant: "ghost", onClick: () => onCancel(order.id) });
+            adminActions.push({ key: "cancel", label: "Cancelar pedido", variant: "ghost", onClick: () => onCancel(order.id) });
 
             return (
-              <li key={order.id} className="orders-item orders-item--admin">
-                <article className="orders-card">
+              <li key={order.id} className={styles.item}>
+                <article className={styles.card}>
                   <OrderHeader order={order} />
                   <OrderDetails order={order} />
-                  <div className="orders-admin-actions">
+                  <div className={styles.adminActions}>
                     {adminActions.map((action) => (
                       <button
                         key={action.key}
@@ -205,7 +217,7 @@ export const OrdersModal: React.FC<OrdersModalProps> = ({
         </ul>
       )}
       {onOpenAdminPanel && (
-        <div className="orders-admin-cta">
+        <div className={styles.adminCta}>
           <button type="button" className="btn-primary btn-sm" onClick={onOpenAdminPanel}>
             Ver más en /admin
           </button>
@@ -216,66 +228,65 @@ export const OrdersModal: React.FC<OrdersModalProps> = ({
 
   return (
     <OverlayPortal>
-      <div className="orders-overlay" role="dialog" aria-modal="true" aria-label="Historial de pedidos">
-        <div className="orders-modal">
-          <header className="orders-modal__header">
+      <div className={styles.overlay} role="dialog" aria-modal="true" aria-label="Historial de pedidos">
+        <div className={styles.container}>
+          <header className={styles.header}>
             <div>
-              <h2>Mis pedidos</h2>
-              <p className="orders-modal__subtitle">
-                Seguimos tus pedidos y te avisamos cuando cada uno esté confirmado.
-              </p>
+              <h2 className={styles.title}>Mis pedidos</h2>
+              <p className={styles.subtitle}>Seguimos tus pedidos y te avisamos cuando cada uno esté confirmado.</p>
             </div>
-            <button className="orders-close" type="button" onClick={onClose} aria-label="Cerrar">
+            <button className={styles.closeButton} type="button" onClick={onClose} aria-label="Cerrar">
               ×
             </button>
           </header>
-
-          {isAdmin && (
-            <div className="orders-tabs" role="tablist">
-              <button
-                type="button"
-                role="tab"
-                aria-selected={activeView === "user"}
-                className={`orders-tab${activeView === "user" ? " is-active" : ""}`}
-                onClick={() => onViewChange("user")}
-              >
-                Tus pedidos
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={activeView === "admin"}
-                className={`orders-tab${activeView === "admin" ? " is-active" : ""}`}
-                onClick={() => onViewChange("admin")}
-              >
-                Gestionar pedidos
-              </button>
-            </div>
-          )}
-
-          {error && <p className="orders-error">{error}</p>}
-
-          {loading ? (
-            <div className="orders-loading" aria-busy="true">
-              <div className="loader-ring loader-ring--sm">
-                <div></div>
-                <div></div>
-                <div></div>
-                <div></div>
+          <div className={styles.body}>
+            {isAdmin && (
+              <div className={styles.tabs} role="tablist">
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={activeView === "user"}
+                  className={cx(styles.tab, activeView === "user" && styles.tabActive)}
+                  onClick={() => onViewChange("user")}
+                >
+                  Tus pedidos
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={activeView === "admin"}
+                  className={cx(styles.tab, activeView === "admin" && styles.tabActive)}
+                  onClick={() => onViewChange("admin")}
+                >
+                  Gestionar pedidos
+                </button>
               </div>
-              <span>Cargando pedidos...</span>
-            </div>
-          ) : (
-            <div className={`orders-layout${activeContent ? " orders-layout--with-active" : ""}`}>
-              {activeContent && <aside className="orders-layout__aside">{activeContent}</aside>}
-              <div className="orders-layout__main">
-                {viewerContent}
-                {adminContent}
-              </div>
-            </div>
-          )}
+            )}
 
-          <footer className="orders-modal__footer">
+            {error && <p className={styles.error}>{error}</p>}
+
+            {loading ? (
+              <div className={styles.loading} aria-busy="true">
+                <div className="loader-ring loader-ring--sm">
+                  <div></div>
+                  <div></div>
+                  <div></div>
+                  <div></div>
+                </div>
+                <span>Cargando pedidos...</span>
+              </div>
+            ) : (
+              <div className={cx(styles.layout, activeContent && styles.layoutWithActive)}>
+                {activeContent && <aside className={styles.aside}>{activeContent}</aside>}
+                <div className={styles.main}>
+                  {viewerContent}
+                  {adminContent}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <footer className={styles.footer}>
             <button className="btn-primary" type="button" onClick={onClose}>
               Cerrar
             </button>
@@ -325,11 +336,18 @@ const ActiveOrderPanel: React.FC<ActiveOrderPanelProps> = ({ data, onSendMessage
     state: statusState(step.status),
   }));
 
+  const content = (
+    <div className={styles.activeOrderContent}>
+      <OrderDetails order={order} />
+      <OrderChat messages={messages} onSubmit={handleSubmit} message={message} setMessage={setMessage} sending={sending} />
+    </div>
+  );
+
   return (
-    <section className="orders-section" aria-label="Pedido en curso">
-      <div className="orders-section__header">
+    <section className={styles.section} aria-label="Pedido en curso">
+      <div className={styles.sectionHeader}>
         <h3>Pedido en curso</h3>
-        <div className="orders-section__actions">
+        <div className={styles.sectionActions}>
           {onRefresh && (
             <button className="btn-ghost btn-sm" type="button" onClick={onRefresh}>
               Actualizar
@@ -337,27 +355,33 @@ const ActiveOrderPanel: React.FC<ActiveOrderPanelProps> = ({ data, onSendMessage
           )}
         </div>
       </div>
-      <article className={`orders-card orders-card--active${isCancelled ? " is-cancelled" : ""}`}>
+      <article className={cx(styles.card, styles.activeCard, isCancelled && styles.activeCardCancelled)}>
         <OrderHeader order={order} />
 
-        {!isCancelled && (
-          <ul className="active-order__timeline">
-            {timeline.map((step) => (
-              <li key={step.status} className={`active-order__timeline-step active-order__timeline-step--${step.state}`}>
-                <span className="active-order__timeline-title">{step.title}</span>
-                <span className="active-order__timeline-desc">{step.description}</span>
-              </li>
+        {!isCancelled ? (
+          <div className={styles.timeline} role="list">
+            {timeline.map((step, index) => (
+              <div
+                key={step.status}
+                className={cx(
+                  styles.timelineStep,
+                  step.state === "done" && styles.timelineStateDone,
+                  step.state === "current" && styles.timelineStateCurrent,
+                  step.state === "todo" && styles.timelineStateTodo
+                )}
+                role="listitem"
+              >
+                <span className={styles.timelineLabel} aria-hidden="true">{index + 1}</span>
+                <span className={styles.timelineTitle}>{step.title}</span>
+                <span className={styles.timelineDescription}>{step.description}</span>
+              </div>
             ))}
-          </ul>
+          </div>
+        ) : (
+          <p className={styles.cancelledBadge}>Este pedido fue cancelado. Si necesitás ayuda, dejá un mensaje al equipo.</p>
         )}
 
-        {isCancelled && (
-          <p className="active-order__cancelled">Este pedido fue cancelado. Si necesitás ayuda, dejá un mensaje al equipo.</p>
-        )}
-
-        <OrderDetails order={order} />
-
-        <OrderChat messages={messages} onSubmit={handleSubmit} message={message} setMessage={setMessage} sending={sending} />
+        {content}
       </article>
     </section>
   );
@@ -382,27 +406,31 @@ const OrderChat: React.FC<OrderChatProps> = ({ messages, onSubmit, message, setM
     .filter((entry) => entry.text.length > 0);
 
   return (
-    <div className="active-order__chat">
-      <div className="active-order__chat-header">
+    <div className={styles.chat}>
+      <div className={styles.chatHeader}>
         <h4>Chat con el equipo</h4>
         <span>Respondemos desde el panel admin</span>
       </div>
-      <div className="active-order__chat-messages">
+      <div className={styles.chatMessages}>
         {items.length === 0 ? (
-          <p className="active-order__chat-empty">Podés dejar una nota o consulta para el equipo.</p>
+          <p className={styles.chatEmpty}>Podés dejar una nota o consulta para el equipo.</p>
         ) : (
           <ul>
-            {items.map((entry) => (
-              <li key={entry.id} className={`active-order__chat-message active-order__chat-message--${entry.author.toLowerCase()}`}>
-                <span className="active-order__chat-text">{entry.text}</span>
-                <span className="active-order__chat-meta">{dateFormatter.format(new Date(entry.createdAt))}</span>
-              </li>
-            ))}
+            {items.map((entry) => {
+              const author = entry.author.toLowerCase();
+              const isCustomer = author === "customer" || author === "user";
+              return (
+                <li key={entry.id} className={cx(styles.chatMessage, isCustomer && styles.chatMessageUser)}>
+                  <span className={styles.chatText}>{entry.text}</span>
+                  <span className={styles.chatMeta}>{dateFormatter.format(new Date(entry.createdAt))}</span>
+                </li>
+              );
+            })}
           </ul>
         )}
       </div>
-      <form className="active-order__chat-form" onSubmit={onSubmit}>
-        <label htmlFor="order-chat" className="sr-only">
+      <form className={styles.chatForm} onSubmit={onSubmit}>
+        <label htmlFor="order-chat" className={styles.srOnly}>
           Escribí un mensaje para el equipo
         </label>
         <textarea
@@ -413,7 +441,7 @@ const OrderChat: React.FC<OrderChatProps> = ({ messages, onSubmit, message, setM
           placeholder="Ej: Podés avisarme cuando salga del horno?"
           disabled={sending}
         />
-        <div className="active-order__chat-actions">
+        <div className={styles.chatActions}>
           <button className="btn-primary btn-sm" type="submit" disabled={sending || message.trim().length === 0}>
             {sending ? "Enviando…" : "Enviar"}
           </button>
@@ -453,14 +481,14 @@ const resolveTimelineState = (current: OrderStatus) => {
 const OrderHeader: React.FC<{ order: ApiOrder }> = ({ order }) => {
   const code = formatOrderCode(order.number);
   const statusLabel = statusLabels[order.status] ?? order.status;
-  const statusClass = `orders-status orders-status--${order.status.toLowerCase()}`;
+  const statusClass = cx(styles.status, statusClassMap[order.status]);
   const placedAt = order.placedAt ?? order.createdAt;
 
   return (
-    <div className="orders-item__header">
+    <div className={styles.itemHeader}>
       <div>
-        <span className="orders-code">#{code}</span>
-        <span className="orders-date">{dateFormatter.format(new Date(placedAt))}</span>
+        <span className={styles.orderCode}>#{code}</span>
+        <span className={styles.orderDate}>{dateFormatter.format(new Date(placedAt))}</span>
       </div>
       <span className={statusClass}>{statusLabel}</span>
     </div>
@@ -484,45 +512,43 @@ const OrderDetails: React.FC<{ order: ApiOrder }> = ({ order }) => {
   const totalItems = items.reduce<number>((sum, item) => sum + (Number(item.quantity) || 0), 0);
 
   return (
-    <div className="orders-item__body">
-      <div className="orders-item__summary">
-        <dl>
-          {customerName && (
-            <div>
-              <dt>Cliente</dt>
-              <dd>{customerName}</dd>
-            </div>
-          )}
-          {address && (
-            <div>
-              <dt>Entrega</dt>
-              <dd>{address}</dd>
-            </div>
-          )}
-          {payment && (
-            <div>
-              <dt>Pago</dt>
-              <dd>{payment}</dd>
-            </div>
-          )}
+    <section className={styles.details} aria-label="Resumen del pedido">
+      <dl className={styles.detailsMeta}>
+        {customerName && (
           <div>
-            <dt>Total</dt>
-            <dd>{currencyFormatter.format(order.totalNet ?? order.totalGross)}</dd>
+            <dt>Cliente</dt>
+            <dd>{customerName}</dd>
           </div>
-          {totalItems > 0 && (
-            <div>
-              <dt>Ítems</dt>
-              <dd>{totalItems}</dd>
-            </div>
-          )}
-        </dl>
-      </div>
+        )}
+        {address && (
+          <div>
+            <dt>Entrega</dt>
+            <dd>{address}</dd>
+          </div>
+        )}
+        {payment && (
+          <div>
+            <dt>Pago</dt>
+            <dd>{payment}</dd>
+          </div>
+        )}
+        <div>
+          <dt>Total</dt>
+          <dd>{currencyFormatter.format(order.totalNet ?? order.totalGross)}</dd>
+        </div>
+        {totalItems > 0 && (
+          <div>
+            <dt>Ítems</dt>
+            <dd>{totalItems}</dd>
+          </div>
+        )}
+      </dl>
       {items.length > 0 && (
-        <ul className="orders-item__products">
+        <ul className={styles.detailsItems}>
           {items.map((item, index) => (
-            <li key={`${order.id}-${index}`}>
-              <span className="orders-item__product-label">{item.label}</span>
-              <span className="orders-item__product-meta">
+            <li key={`${order.id}-${index}`} className={styles.detailsItem}>
+              <span className={styles.detailsItemName}>{item.label}</span>
+              <span className={styles.detailsMetaInline}>
                 x{item.quantity}
                 {item.side ? ` · ${item.side}` : ""}
                 {item.lineTotal ? ` — ${currencyFormatter.format(item.lineTotal)}` : ""}
@@ -531,6 +557,6 @@ const OrderDetails: React.FC<{ order: ApiOrder }> = ({ order }) => {
           ))}
         </ul>
       )}
-    </div>
+    </section>
   );
 };

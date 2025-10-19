@@ -1,0 +1,557 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  padding: clamp(16px, 4vw, 28px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 8, 4, 0.74);
+  backdrop-filter: blur(18px);
+}
+
+.container {
+  width: min(960px, 96vw);
+  max-height: min(85vh, 680px);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: clamp(18px, 3vw, 24px);
+  background: var(--card);
+  border-radius: 22px;
+  border: 1px solid color-mix(in srgb, var(--border) 65%, transparent);
+  box-shadow: 0 36px 72px rgba(12, 8, 8, 0.32);
+  overflow: hidden;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.title {
+  margin: 0 0 4px;
+  font-family: var(--font-serif);
+  font-size: clamp(1.4rem, 2.4vw, 1.7rem);
+  color: var(--text-strong);
+}
+
+.subtitle {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.92rem;
+  max-width: 48ch;
+}
+
+.closeButton {
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 1.6rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.closeButton:hover,
+.closeButton:focus-visible {
+  color: var(--text-strong);
+}
+
+.body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(16px, 3vw, 24px);
+}
+
+.tabs {
+  align-self: flex-start;
+  display: inline-flex;
+  gap: 6px;
+  padding: 4px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--card) 85%, rgba(255, 255, 255, 0.18));
+}
+
+.tab {
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.tabActive {
+  background: color-mix(in srgb, var(--primary) 26%, transparent);
+  color: color-mix(in srgb, var(--primary) 80%, var(--text-strong) 20%);
+}
+
+.error {
+  margin: 0;
+  border-radius: calc(var(--radius-md) - 2px);
+  border: 1px solid color-mix(in srgb, #ff8066 55%, transparent);
+  background: color-mix(in srgb, #ffebe6 70%, rgba(255, 255, 255, 0.88));
+  color: #b42318;
+  font-size: 0.9rem;
+  padding: 10px 12px;
+}
+
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 28px 0;
+  color: var(--text-muted);
+}
+
+.layout {
+  display: grid;
+  gap: clamp(16px, 3vw, 26px);
+  grid-template-columns: minmax(0, 1fr);
+  min-height: 0;
+}
+
+.layoutWithActive {
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+}
+
+.main {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(16px, 3vw, 24px);
+  min-height: 0;
+}
+
+.aside {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(16px, 3vw, 22px);
+  min-height: 0;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.sectionActions {
+  display: flex;
+  gap: 8px;
+}
+
+.empty {
+  margin: 0;
+  padding: 18px;
+  border-radius: calc(var(--radius-md) - 2px);
+  border: 1px dashed color-mix(in srgb, var(--border) 70%, transparent);
+  color: var(--text-muted);
+  background: color-mix(in srgb, var(--card) 92%, rgba(255, 255, 255, 0.05));
+  font-size: 0.92rem;
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.listAdmin {
+  gap: 14px;
+}
+
+.item {
+  list-style: none;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: clamp(14px, 3vw, 20px);
+  border-radius: calc(var(--radius-md) + 4px);
+  border: 1px solid color-mix(in srgb, var(--border) 65%, transparent);
+  background: color-mix(in srgb, var(--card) 96%, rgba(255, 255, 255, 0.06));
+  box-shadow: 0 18px 44px rgba(12, 8, 8, 0.24);
+  transition: border-color 0.18s ease, transform 0.18s ease;
+}
+
+.card:hover {
+  border-color: color-mix(in srgb, var(--primary) 22%, transparent);
+  transform: translateY(-2px);
+}
+
+.activeCard {
+  position: sticky;
+  top: 0;
+  box-shadow: 0 26px 60px rgba(18, 10, 12, 0.32);
+}
+
+.activeCardCancelled {
+  border-color: color-mix(in srgb, var(--primary) 35%, transparent);
+  background: color-mix(in srgb, rgba(200, 16, 46, 0.12) 65%, var(--card) 35%);
+}
+
+.historyCard {
+  background: color-mix(in srgb, var(--card) 93%, rgba(255, 255, 255, 0.08));
+}
+
+.activeOrderContent {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.userActions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.adminActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.adminCta {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.footer {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.itemHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.orderCode {
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.orderDate {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.statusDraft {
+  background: color-mix(in srgb, var(--border) 32%, transparent);
+  color: color-mix(in srgb, var(--text-muted) 85%, var(--text-base) 15%);
+}
+
+.statusPending {
+  background: color-mix(in srgb, var(--warning) 20%, transparent);
+  color: color-mix(in srgb, var(--warning) 80%, var(--text-strong) 20%);
+}
+
+.statusPreparing {
+  background: color-mix(in srgb, rgba(255, 193, 7, 0.18), transparent);
+  color: color-mix(in srgb, rgba(255, 193, 7, 0.8), var(--text-strong) 20%);
+}
+
+.statusConfirmed {
+  background: color-mix(in srgb, rgba(74, 201, 155, 0.22), transparent);
+  color: color-mix(in srgb, rgba(46, 160, 120, 0.86), var(--text-strong) 14%);
+}
+
+.statusFulfilled {
+  background: color-mix(in srgb, rgba(52, 152, 219, 0.22), transparent);
+  color: color-mix(in srgb, rgba(34, 112, 185, 0.86), var(--text-strong) 14%);
+}
+
+.statusCancelled {
+  background: color-mix(in srgb, rgba(200, 16, 46, 0.14), transparent);
+  color: rgba(200, 16, 46, 0.85);
+}
+
+.details {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  font-size: 0.92rem;
+}
+
+.detailsMeta {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.detailsMeta dt {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.detailsMeta dd {
+  margin: 0;
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.detailsItems {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+}
+
+.detailsItem {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+  color: var(--text-muted);
+}
+
+.detailsItemName {
+  color: var(--text-strong);
+  font-weight: 600;
+}
+
+.detailsMetaInline {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.timeline {
+  display: flex;
+  gap: 10px;
+  padding: 12px;
+  border-radius: calc(var(--radius-md) - 2px);
+  border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  background: color-mix(in srgb, var(--card) 95%, rgba(255, 255, 255, 0.05));
+  overflow-x: auto;
+}
+
+.timelineStep {
+  min-width: 160px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: calc(var(--radius-md) - 2px);
+  border: 1px solid color-mix(in srgb, var(--border) 65%, transparent);
+  background: color-mix(in srgb, var(--card) 92%, rgba(255, 255, 255, 0.08));
+}
+
+.timelineStateDone {
+  border-color: color-mix(in srgb, rgba(74, 201, 155, 0.6), transparent);
+}
+
+.timelineStateCurrent {
+  border-color: color-mix(in srgb, var(--primary) 32%, transparent);
+  background: color-mix(in srgb, var(--card) 88%, rgba(255, 214, 146, 0.12));
+}
+
+.timelineStateTodo {
+  opacity: 0.7;
+}
+
+.timelineLabel {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--primary) 22%, rgba(255, 255, 255, 0.9));
+  color: var(--primary);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.timelineTitle {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--text-strong);
+}
+
+.timelineDescription {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.cancelledBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, rgba(200, 16, 46, 0.12) 70%, transparent);
+  color: rgba(200, 16, 46, 0.85);
+  font-size: 0.82rem;
+}
+
+.chat {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  border-radius: calc(var(--radius-md) - 2px);
+  border: 1px solid color-mix(in srgb, var(--border) 68%, transparent);
+  background: color-mix(in srgb, var(--card) 95%, rgba(255, 255, 255, 0.04));
+}
+
+.chatHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.chatHeader h4 {
+  margin: 0;
+  color: var(--text-strong);
+}
+
+.chatHeader span {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
+.chatMessages {
+  max-height: 220px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.chatEmpty {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.chatMessages ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.chatMessage {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-start;
+  max-width: 80%;
+}
+
+.chatMessageUser {
+  align-self: flex-end;
+  align-items: flex-end;
+}
+
+.chatText {
+  display: inline-flex;
+  padding: 8px 12px;
+  border-radius: calc(var(--radius-md) - 2px);
+  background: color-mix(in srgb, var(--primary) 20%, rgba(255, 255, 255, 0.12));
+  color: var(--text-strong);
+}
+
+.chatMessageUser .chatText {
+  background: color-mix(in srgb, rgba(74, 201, 155, 0.22), transparent);
+}
+
+.chatMeta {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.chatForm {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.chatForm textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: calc(var(--radius-md) - 2px);
+  border: 1px solid color-mix(in srgb, var(--border) 65%, transparent);
+  background: color-mix(in srgb, var(--card) 94%, rgba(255, 255, 255, 0.08));
+  color: var(--text-base);
+  resize: vertical;
+  min-height: 90px;
+}
+
+.chatActions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
+@media (max-width: 960px) {
+  .layoutWithActive {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .aside {
+    order: -1;
+  }
+}
+
+@media (prefers-color-scheme: light) {
+  .overlay {
+    background: rgba(254, 248, 244, 0.85);
+  }
+}

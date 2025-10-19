@@ -21,6 +21,7 @@ import {
   buildProfileValues,
   mapOrderItemsToProducts,
   processDiscounts,
+  type DiscountEntry,
   type DiscountSnapshot,
 } from "utils/orders";
 import { ADMIN_EMAIL } from "config/admin";
@@ -310,6 +311,19 @@ export function Home() {
     setDiscountsModalOpen(false);
   };
 
+  const handleApplyDiscountFromModal = useCallback(
+    (discount: DiscountEntry) => {
+      try {
+        window.sessionStorage.setItem("pt_checkout_discount", discount.code);
+      } catch (error) {
+        console.error("No se pudo persistir el código aplicado desde el modal", error);
+      }
+      setDiscountsModalOpen(false);
+      navigate("/checkout");
+    },
+    [navigate]
+  );
+
   const handleOpenProfile = () => {
     setProfileSuccess(null);
     setProfileError(null);
@@ -383,124 +397,137 @@ export function Home() {
     }
   };
 
+  const handleOpenLogin = useCallback(() => {
+    console.log("[Home] abrir login modal");
+    setLoginOpen(true);
+  }, []);
+
   return (
-    <div className="home-shell">
-      <div className="home-notice" aria-label="Beneficios de los combos">
-        <div className="home-notice__track" role="presentation">
-          <span>TODOS NUESTROS COMBOS: ENTRADA · PRINCIPAL · POSTRE</span>
-          <span>TODOS NUESTROS COMBOS: ENTRADA · PRINCIPAL · POSTRE</span>
-          <span>TODOS NUESTROS COMBOS: ENTRADA · PRINCIPAL · POSTRE</span>
-        </div>
-      </div>
-
-      <section className="card home-hero-card" aria-labelledby="home-hero-title">
-        <header className="home-hero-card__header">
-          <span className="home-hero-card__eyebrow">Delivery premium en el oeste</span>
-          <h1 id="home-hero-title" className="home-hero-card__title">
-            Nuevo pedido
-          </h1>
-          <p className="home-hero-card__subtitle">Alta gastronomía sin espera</p>
-        </header>
-
-        <AccessActions
-          user={user}
-          onStartAsGuest={startAsGuest}
-          onOpenLogin={() => setLoginOpen(true)}
-          onLogout={logout}
-          onGoToMenu={() => navigate("/menu")}
-          onOpenOrders={() => handleOpenOrders("user")}
-          onOpenAdmin={isAdmin ? () => handleOpenOrders("admin") : undefined}
-          isAdmin={isAdmin}
-          onOpenDiscounts={handleOpenDiscounts}
-          onOpenProfile={handleOpenProfile}
-          actionsDisabled={!backendUserId}
-          hasActiveOrder={hasActiveOrder}
-        />
-      </section>
-
-      <section className="card home-zone-card" aria-labelledby="home-zone-title">
-        <header className="home-zone-card__header">
-          <h2 id="home-zone-title">Zona de reparto</h2>
-          <p className="home-zone-card__copy">Entregamos en menos de 45 minutos en los barrios destacados.</p>
-        </header>
-        <div className="zone-marquee" aria-label="Zonas disponibles">
-          <div className="zone-marquee__track" aria-hidden>
-            <span className="zone-marquee__item">CIUDADELA</span>
-            <span className="zone-marquee__bullet">•</span>
-            <span className="zone-marquee__item">VILLA REAL</span>
-            <span className="zone-marquee__bullet">•</span>
-            <span className="zone-marquee__item">VERSALLES</span>
-            <span className="zone-marquee__bullet">•</span>
-            <span className="zone-marquee__item">VILLA RAFFO</span>
-            <span className="zone-marquee__bullet">•</span>
-            <span className="zone-marquee__item">CASEROS</span>
-            <span className="zone-marquee__bullet">•</span>
-            <span className="zone-marquee__item">CIUDADELA</span>
-            <span className="zone-marquee__bullet">•</span>
-            <span className="zone-marquee__item">VILLA REAL</span>
-            <span className="zone-marquee__bullet">•</span>
-            <span className="zone-marquee__item">VERSALLES</span>
-            <span className="zone-marquee__bullet">•</span>
-            <span className="zone-marquee__item">VILLA RAFFO</span>
-            <span className="zone-marquee__bullet">•</span>
-            <span className="zone-marquee__item">CASEROS</span>
+    <>
+      <title>Pollos Tello's | Delivery de Alta Gastronomía en Zona Oeste</title>
+      <meta
+        name="description"
+        content="Pedí online en Pollos Tello's. Disfrutá de nuestros combos premium con entrada, principal y postre. Entrega en menos de 45 minutos en Ciudadela, Villa Real, Versalles y más."
+      />
+      <div className="home-shell">
+        <div className="home-notice" aria-label="Beneficios de los combos">
+          <div className="home-notice__track" role="presentation">
+            <span>TODOS NUESTROS COMBOS: ENTRADA · PRINCIPAL · POSTRE</span>
+            <span>TODOS NUESTROS COMBOS: ENTRADA · PRINCIPAL · POSTRE</span>
+            <span>TODOS NUESTROS COMBOS: ENTRADA · PRINCIPAL · POSTRE</span>
           </div>
         </div>
-        <div className="map-container" aria-label="Cobertura de reparto">
-          <img src="/mapa.png" alt="Mapa de la zona de reparto de Pollos Tello's" draggable={false} />
-          <div className="radar-overlay" aria-hidden="true" />
-        </div>
-      </section>
-      <LoginModal open={loginOpen} onClose={() => setLoginOpen(false)} />
-      <OrdersModal
-        open={ordersModalOpen}
-        onClose={handleCloseOrders}
-        loading={ordersLoading}
-        error={ordersError}
-        viewerOrders={viewerOrders}
-        pendingOrders={pendingOrders}
-        isAdmin={isAdmin}
-        activeView={isAdmin ? ordersView : "user"}
-        onViewChange={(view) => setOrdersView(view)}
-        onRefresh={loadOrders}
-        onConfirm={handleConfirmOrder}
-        onCancel={handleRequestCancelOrder}
-        onReorder={handleReorder}
-        onOpenAdminPanel={isAdmin ? () => navigate('/admin/pedidos') : undefined}
-        activeOrder={activeOrder}
-        onSendMessage={handleSendOrderMessage}
-        onRefreshActive={loadActiveOrder}
-      />
-      <DiscountsModal
-        open={discountsModalOpen}
-        onClose={handleCloseDiscounts}
-        loading={discountsLoading}
-        error={discountsError}
-        totalSavings={totalSavings}
-        totalRedemptions={totalRedemptions}
-        activeDiscounts={activeDiscounts}
-        history={discountHistory}
-        shareCoupons={shareCoupons}
-        onShareCoupon={handleShareCoupon}
-        onRefresh={() => loadDiscounts(true)}
-      />
-      <ProfileModal
-        open={profileModalOpen}
-        onClose={handleCloseProfile}
-        loading={profileLoading}
-        saving={profileSaving}
-        error={profileError}
-        success={profileSuccess}
-        initialValues={profileValues}
-        stats={profileStats}
-        onSubmit={handleSaveProfile}
-      />
-      <CancelOrderModal
-        open={cancelModalOpen}
-        loading={ordersLoading}
-        onClose={handleCloseCancelModal}
-        onConfirm={handleConfirmCancelOrder}
-      />
-    </div>
+
+        <section className="card home-hero-card" aria-labelledby="home-hero-title">
+          <header className="home-hero-card__header">
+            <span className="home-hero-card__eyebrow">Delivery premium en el oeste</span>
+            <h1 id="home-hero-title" className="home-hero-card__title">
+              Delivery de Pollos a las Brasas
+            </h1>
+            <p className="home-hero-card__subtitle">Alta gastronomía sin espera</p>
+          </header>
+
+          <AccessActions
+            user={user}
+            onStartAsGuest={startAsGuest}
+            onOpenLogin={handleOpenLogin}
+            onLogout={logout}
+            onGoToMenu={() => navigate("/menu")}
+            onOpenOrders={() => handleOpenOrders("user")}
+            onOpenAdmin={isAdmin ? () => handleOpenOrders("admin") : undefined}
+            isAdmin={isAdmin}
+            onOpenDiscounts={handleOpenDiscounts}
+            onOpenProfile={handleOpenProfile}
+            actionsDisabled={!backendUserId}
+            hasActiveOrder={hasActiveOrder}
+          />
+        </section>
+
+        <section className="card home-zone-card" aria-labelledby="home-zone-title">
+          <header className="home-zone-card__header">
+            <h2 id="home-zone-title">Zona de reparto</h2>
+            <p className="home-zone-card__copy">Entregamos en menos de 45 minutos en los barrios destacados.</p>
+          </header>
+          <div className="zone-marquee" aria-label="Zonas disponibles">
+            <div className="zone-marquee__track" aria-hidden>
+              <span className="zone-marquee__item">CIUDADELA</span>
+              <span className="zone-marquee__bullet">•</span>
+              <span className="zone-marquee__item">VILLA REAL</span>
+              <span className="zone-marquee__bullet">•</span>
+              <span className="zone-marquee__item">VERSALLES</span>
+              <span className="zone-marquee__bullet">•</span>
+              <span className="zone-marquee__item">VILLA RAFFO</span>
+              <span className="zone-marquee__bullet">•</span>
+              <span className="zone-marquee__item">CASEROS</span>
+              <span className="zone-marquee__bullet">•</span>
+              <span className="zone-marquee__item">CIUDADELA</span>
+              <span className="zone-marquee__bullet">•</span>
+              <span className="zone-marquee__item">VILLA REAL</span>
+              <span className="zone-marquee__bullet">•</span>
+              <span className="zone-marquee__item">VERSALLES</span>
+              <span className="zone-marquee__bullet">•</span>
+              <span className="zone-marquee__item">VILLA RAFFO</span>
+              <span className="zone-marquee__bullet">•</span>
+              <span className="zone-marquee__item">CASEROS</span>
+            </div>
+          </div>
+          <div className="map-container" aria-label="Cobertura de reparto">
+            <img src="/mapa.png" alt="Mapa de la zona de reparto de Pollos Tello's" draggable={false} />
+            <div className="radar-overlay" aria-hidden="true" />
+          </div>
+        </section>
+        <LoginModal open={loginOpen} onClose={() => setLoginOpen(false)} />
+        <OrdersModal
+          open={ordersModalOpen}
+          onClose={handleCloseOrders}
+          loading={ordersLoading}
+          error={ordersError}
+          viewerOrders={viewerOrders}
+          pendingOrders={pendingOrders}
+          isAdmin={isAdmin}
+          activeView={isAdmin ? ordersView : "user"}
+          onViewChange={(view) => setOrdersView(view)}
+          onRefresh={loadOrders}
+          onConfirm={handleConfirmOrder}
+          onCancel={handleRequestCancelOrder}
+          onReorder={handleReorder}
+          onOpenAdminPanel={isAdmin ? () => navigate('/admin/pedidos') : undefined}
+          activeOrder={activeOrder}
+          onSendMessage={handleSendOrderMessage}
+          onRefreshActive={loadActiveOrder}
+        />
+        <DiscountsModal
+          open={discountsModalOpen}
+          onClose={handleCloseDiscounts}
+          loading={discountsLoading}
+          error={discountsError}
+          totalSavings={totalSavings}
+          totalRedemptions={totalRedemptions}
+          activeDiscounts={activeDiscounts}
+          history={discountHistory}
+          shareCoupons={shareCoupons}
+          onShareCoupon={handleShareCoupon}
+          onRefresh={() => loadDiscounts(true)}
+          onApplyDiscount={handleApplyDiscountFromModal}
+        />
+        <ProfileModal
+          open={profileModalOpen}
+          onClose={handleCloseProfile}
+          loading={profileLoading}
+          saving={profileSaving}
+          error={profileError}
+          success={profileSuccess}
+          initialValues={profileValues}
+          stats={profileStats}
+          onSubmit={handleSaveProfile}
+        />
+        <CancelOrderModal
+          open={cancelModalOpen}
+          loading={ordersLoading}
+          onClose={handleCloseCancelModal}
+          onConfirm={handleConfirmCancelOrder}
+        />
+      </div>
+    </>
   );
 }

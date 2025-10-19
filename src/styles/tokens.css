@@ -1,0 +1,121 @@
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+  }
+}
+
+:root {
+  --fs-base: 17px;
+  --font-serif: 'Playfair Display', 'Times New Roman', serif;
+  --font-sans: 'Poppins', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --background-light: #fff9f2;
+  --background-alt: #fff1e6;
+  --surface-light: #ffffff;
+  --surface-soft: rgba(255, 250, 245, 0.82);
+  --fs-xxs: 12px;
+  --fs-xs: 13px;
+  --fs-sm: 14px;
+  --fs-md: var(--fs-base);
+  --fs-lg: 19px;
+  --fs-xl: 24px;
+  --fs-2xl: 32px;
+  --primary: #c8102e;
+  --primary-dark: #a30d23;
+  --accent: #e67e22;
+  --accent-hover: #f6c343;
+  --neutral-100: #ffffff;
+  --neutral-200: #e5e5e5;
+  --neutral-500: #7a7a7a;
+  --text-base: #2d1f1c;
+  --text-strong: #170f0e;
+  --text-muted: color-mix(in srgb, var(--text-base) 70%, rgba(120, 85, 70, 0.54));
+  --text-inverse: #ffffff;
+  --bg: var(--background-light);
+  --card: color-mix(in srgb, var(--surface-light) 85%, rgba(255, 248, 239, 0.75));
+  --surface: color-mix(in srgb, var(--surface-light) 92%, var(--background-alt) 8%);
+  --border: rgba(200, 16, 46, 0.09);
+  --border-strong: rgba(51, 51, 51, 0.12);
+  --overlay: rgba(31, 8, 8, 0.48);
+  --radius-xl: 20px;
+  --radius-md: 14px;
+  --radius-sm: 10px;
+
+  /* Modal sizes */
+  --modal-size-s: min(420px, 92vw);
+  --modal-size-m: min(600px, 92vw);
+  --modal-size-l: min(920px, 92vw);
+
+  --shadow-soft: 0 12px 28px rgba(200, 16, 46, 0.06);
+  --shadow-lg: 0 24px 60px rgba(200, 16, 46, 0.12);
+  --focus-ring: 0 0 0 3px rgba(246, 195, 67, 0.55);
+  --btn-primary-bg: var(--primary);
+  --btn-primary-text: var(--text-inverse);
+  --btn-primary-hover: var(--primary-dark);
+  --btn-primary-hover-text: var(--text-inverse);
+  --btn-secondary-bg: var(--accent);
+  --btn-secondary-text: var(--text-strong);
+  --btn-secondary-hover: var(--accent-hover);
+  --badge-bg: var(--primary);
+  --badge-text: var(--text-inverse);
+  --badge-glow: 0 0 22px rgba(200, 16, 46, 0.35);
+  --btn-radius: 14px;
+  --bg-gradient: radial-gradient(1200px 680px at -10% -20%, rgba(246, 195, 67, 0.18) 0%, transparent 60%),
+    radial-gradient(900px 600px at 110% 10%, rgba(230, 126, 34, 0.14) 0%, transparent 65%),
+    linear-gradient(160deg, rgba(255, 210, 170, 0.12) 0%, rgba(255, 250, 245, 0.96) 55%, rgba(255, 250, 245, 1) 100%);
+  --admin-bg: linear-gradient(180deg, rgba(255, 247, 240, 0.92) 0%, rgba(255, 252, 246, 0.96) 100%);
+  --admin-sidebar: color-mix(in srgb, var(--surface) 88%, rgba(200, 16, 46, 0.04));
+  --admin-surface: color-mix(in srgb, var(--card) 88%, rgba(255, 255, 255, 0.28));
+  --admin-border: rgba(200, 16, 46, 0.12);
+  --admin-text-muted: color-mix(in srgb, var(--text-base) 60%, rgba(120, 95, 80, 0.42));
+  --status-draft: #a855f7;
+  --status-pending: #f97316;
+  --status-preparing: #3b82f6;
+  --status-confirmed: #14b8a6;
+  --status-fulfilled: #64748b;
+  --status-cancelled: #ef4444;
+  --chip-shadow: 0 14px 30px rgba(200, 16, 46, 0.08);
+  --card-blur: blur(18px);
+}
+
+:root[data-theme="dark"],
+[data-theme="dark"],
+.dark {
+  --background-light: #121212;
+  --background-alt: #1c0d0c;
+  --surface-light: #1f1f1f;
+  --surface-soft: rgba(59, 13, 12, 0.55);
+  --primary: #ff9f43;
+  --primary-dark: #ff7a1a;
+  --accent: #ffb266;
+  --accent-hover: #ffd49a;
+  --text-base: #f5f2ef;
+  --text-strong: #ffffff;
+  --text-muted: rgba(245, 240, 236, 0.66);
+  --text-inverse: #121212;
+  --bg: #121212;
+  --card: color-mix(in srgb, #1f1f1f 88%, rgba(255, 255, 255, 0.1) 12%);
+  --surface: color-mix(in srgb, #262020 80%, rgba(255, 255, 255, 0.12) 20%);
+  --border: rgba(255, 255, 255, 0.16);
+  --border-strong: rgba(255, 255, 255, 0.12);
+  --overlay: rgba(12, 6, 6, 0.72);
+  --shadow-soft: 0 18px 48px rgba(0, 0, 0, 0.55);
+  --shadow-lg: 0 32px 90px rgba(0, 0, 0, 0.6);
+  --btn-primary-text: var(--text-inverse);
+  --btn-secondary-text: var(--text-inverse);
+  --badge-text: var(--text-inverse);
+  --bg-gradient: radial-gradient(900px 600px at -10% -10%, rgba(92, 26, 26, 0.7) 0%, transparent 60%),
+    radial-gradient(780px 520px at 120% 5%, rgba(59, 13, 12, 0.64) 0%, transparent 70%),
+    linear-gradient(160deg, #3b0d0c 0%, #5c1a1a 55%, #121212 100%);
+  --admin-bg: linear-gradient(180deg, rgba(26, 12, 12, 0.92) 0%, rgba(18, 18, 18, 0.94) 100%);
+  --admin-sidebar: color-mix(in srgb, #1f1f1f 92%, rgba(255, 255, 255, 0.05));
+  --admin-surface: color-mix(in srgb, #242424 88%, rgba(255, 255, 255, 0.06));
+  --admin-border: rgba(255, 255, 255, 0.1);
+  --admin-text-muted: color-mix(in srgb, var(--text-base) 60%, rgba(255, 255, 255, 0.35));
+  --status-draft: #c084fc;
+  --status-pending: #fb923c;
+  --status-preparing: #60a5fa;
+  --status-confirmed: #2dd4bf;
+  --status-fulfilled: #94a3b8;
+  --status-cancelled: #f87171;
+  --chip-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
+}

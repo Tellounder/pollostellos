@@ -6,7 +6,12 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import App from "./App";
-import "./styles/styles.css";
+import "./styles/tokens.css";
+import "./styles/base.css";
+import "./styles/checkout.css";
+import "./styles/home.css";
+import "./styles/orders.css";
+import "./styles/admin.css";
 import "./styles/extras.css";
 import { registerSW } from "virtual:pwa-register";
 

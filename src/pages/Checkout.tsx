@@ -6,6 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { useCart } from "hooks/useCart";
 import { useAuth } from "hooks/useAuth";
 import { useUpsell } from "hooks/useUpsell";
+import { useUserDataLoader } from "hooks/useUserDataLoader";
 import { UpsellModal } from "components/cart/UpsellModal";
 import { SubmittingOverlay } from "components/common/SubmittingOverlay";
 import { waLink } from "utils/format";
@@ -13,6 +14,7 @@ import { api, type CreateOrderPayload } from "utils/api";
 import { EXTRAS, WHATSAPP_NUMBER } from "utils/constants";
 import type { CartItem } from "store/cart";
 import { PREFILL_FALLBACK_KEY, buildLastPurchaseKeys, writeJSONToKeys, type StoredPurchase } from "utils/customerStorage";
+import { processDiscounts, type DiscountEntry } from "utils/orders";
 
 const formatArs = (value: number) =>
   new Intl.NumberFormat("es-AR", {
@@ -49,30 +51,19 @@ const initialForm: OrderForm = {
   paymentMethod: "Efectivo",
 };
 
-const TIMELINE_STEPS: Array<{ title: string; description: string }> = [
-  {
-    title: "Revisá",
-    description: "Chequeá nombre y entrega.",
-  },
-  {
-    title: "WhatsApp",
-    description: "Abrimos el chat con tu pedido listo para ajustar y enviar.",
-  },
-  {
-    title: "Confirmación",
-    description: "Validamos el pedido; si volvés, ves tu progreso.",
-  },
-];
-
 const SUMMARY_PREVIEW_COUNT = 2;
-const SUBMIT_TRANSITION_MS = 2000;
-const REDIRECT_COUNTDOWN_MS = 50000;
-const WHATSAPP_AUTO_OPEN_DELAY_MS = 30000;
+const REGISTERED_SUBMIT_TRANSITION_MS = 2000;
+const REGISTERED_REDIRECT_COUNTDOWN_MS = 35000;
+const REGISTERED_WHATSAPP_TRIGGER_DELAY_MS = 25000;
+const GUEST_SUBMIT_TRANSITION_MS = 3000;
+const GUEST_REDIRECT_COUNTDOWN_MS = 10000;
+const GUEST_WHATSAPP_TRIGGER_DELAY_MS = 10000;
 
 const Checkout: React.FC = () => {
-  const { items, addItem, setQty, total, totalLabel, clearCart } = useCart();
+  const { items, addItem, setQty, total, clearCart } = useCart();
   const { user, backendUserId } = useAuth();
   const { open, countdown, item, accepted, show, accept, cancel, reset } = useUpsell();
+  const { ensureUserData } = useUserDataLoader(backendUserId ?? null);
   const navigate = useNavigate();
   const [form, setForm] = useState<OrderForm>(initialForm);
   const promoTriggeredRef = useRef(false);
@@ -85,7 +76,13 @@ const Checkout: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [prefillNotice, setPrefillNotice] = useState<string | null>(null);
   const [summaryExpanded, setSummaryExpanded] = useState(false);
-  const isRegistered = Boolean(user && backendUserId);
+  const [availableDiscounts, setAvailableDiscounts] = useState<DiscountEntry[]>([]);
+  const [discountCodeInput, setDiscountCodeInput] = useState("");
+  const [selectedDiscount, setSelectedDiscount] = useState<DiscountEntry | null>(null);
+  const [discountAmount, setDiscountAmount] = useState(0);
+  const [discountFeedback, setDiscountFeedback] = useState<string | null>(null);
+  const [discountError, setDiscountError] = useState<string | null>(null);
+  const isRegistered = Boolean(user);
   const profileStorageKey = useMemo(() => {
     if (!backendUserId) return null;
     return `pt_checkout_profile_${backendUserId}`;
@@ -101,6 +98,200 @@ const Checkout: React.FC = () => {
     () => buildLastPurchaseKeys(backendUserId, user?.uid ?? null),
     [backendUserId, user?.uid]
   );
+  const finalTotal = useMemo(() => Math.max(total - discountAmount, 0), [total, discountAmount]);
+  const finalTotalLabel = useMemo(() => formatArs(finalTotal), [finalTotal]);
+  const selectedDiscountDescriptor = useMemo(() => {
+    if (!selectedDiscount) {
+      return null;
+    }
+    const parts = [selectedDiscount.label, selectedDiscount.description]
+      .map((part) => (typeof part === "string" ? part.trim() : ""))
+      .filter((part) => part.length > 0);
+    if (parts.length > 0) {
+      return `${parts.join(" · ")} (${selectedDiscount.code})`;
+    }
+    return selectedDiscount.code;
+  }, [selectedDiscount]);
+
+  const calculateDiscountAmount = useCallback(
+    (entry: DiscountEntry) => {
+      const base = total;
+      const percentage = entry.percentage ? Number(entry.percentage) : null;
+      let computed = percentage ? base * (percentage / 100) : Number(entry.value);
+      if (!Number.isFinite(computed)) computed = 0;
+      computed = Math.min(Math.max(computed, 0), base);
+      return computed;
+    },
+    [total]
+  );
+
+  const applyDiscountCode = useCallback(
+    (codeRaw: string, source: DiscountEntry[] = availableDiscounts) => {
+      const normalized = codeRaw.trim().toUpperCase();
+      if (!normalized) {
+        setSelectedDiscount(null);
+        setDiscountAmount(0);
+        setDiscountFeedback(null);
+        setDiscountError(null);
+        return false;
+      }
+
+      const found = source.find((entry) => entry.code.toUpperCase() === normalized);
+      if (!found) {
+        setSelectedDiscount(null);
+        setDiscountAmount(0);
+        setDiscountFeedback(null);
+        setDiscountError("Ese código no está disponible.");
+        return false;
+      }
+
+      const amount = calculateDiscountAmount(found);
+      if (amount <= 0) {
+        setSelectedDiscount(null);
+        setDiscountAmount(0);
+        setDiscountFeedback(null);
+        setDiscountError("El código no tiene saldo para este pedido.");
+        return false;
+      }
+
+      setSelectedDiscount(found);
+      setDiscountAmount(amount);
+      const descriptorParts = [found.label, found.description]
+        .map((part) => (typeof part === "string" ? part.trim() : ""))
+        .filter((part) => part.length > 0);
+      const descriptor = descriptorParts.length > 0 ? descriptorParts.join(" · ") : found.code;
+      setDiscountFeedback(`Aplicaste ${formatArs(amount)} con ${descriptor}.`);
+      setDiscountError(null);
+      setDiscountCodeInput(found.code);
+      try {
+        window.sessionStorage.setItem("pt_checkout_discount", found.code);
+      } catch {
+        /* noop */
+      }
+      return true;
+    },
+    [availableDiscounts, calculateDiscountAmount]
+  );
+
+  const clearDiscount = useCallback(() => {
+    setSelectedDiscount(null);
+    setDiscountAmount(0);
+    setDiscountFeedback(null);
+    setDiscountError(null);
+    setDiscountCodeInput("");
+    try {
+      window.sessionStorage.removeItem("pt_checkout_discount");
+    } catch {
+      /* noop */
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isRegistered || !backendUserId) {
+      setAvailableDiscounts((prev) => (prev.length > 0 ? [] : prev));
+      if (
+        selectedDiscount ||
+        discountAmount > 0 ||
+        discountFeedback ||
+        discountError ||
+        discountCodeInput
+      ) {
+        clearDiscount();
+      }
+      return;
+    }
+
+    let isMounted = true;
+
+    ensureUserData()
+      .then((bundle) => {
+        if (!bundle || !isMounted) return;
+        const snapshot = processDiscounts(bundle.detail);
+        setAvailableDiscounts((prev) => {
+          const sameLength = prev.length === snapshot.active.length;
+          const matches =
+            sameLength &&
+            prev.every((entry, index) => {
+              const next = snapshot.active[index];
+              if (!next) return false;
+              return (
+                entry.code === next.code &&
+                entry.usesRemaining === next.usesRemaining &&
+                entry.value === next.value &&
+                entry.percentage === next.percentage &&
+                entry.label === next.label &&
+                entry.description === next.description
+              );
+            });
+          return matches ? prev : snapshot.active;
+        });
+
+        const storedCode = (() => {
+          try {
+            return window.sessionStorage.getItem("pt_checkout_discount");
+          } catch {
+            return null;
+          }
+        })();
+
+        if (storedCode) {
+          const success = applyDiscountCode(storedCode, snapshot.active);
+          if (success) {
+            try {
+              window.sessionStorage.removeItem("pt_checkout_discount");
+            } catch {
+              /* noop */
+            }
+          }
+        } else if (selectedDiscount) {
+          const stillValid = snapshot.active.find((entry) => entry.code === selectedDiscount.code);
+          if (!stillValid) {
+            clearDiscount();
+          }
+        }
+      })
+      .catch((error) => {
+        console.error("No se pudieron cargar los descuentos disponibles", error);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [
+    applyDiscountCode,
+    backendUserId,
+    clearDiscount,
+    discountAmount,
+    discountCodeInput,
+    discountError,
+    discountFeedback,
+    ensureUserData,
+    isRegistered,
+    selectedDiscount,
+  ]);
+
+  useEffect(() => {
+    if (!selectedDiscount) {
+      return;
+    }
+    const updatedAmount = calculateDiscountAmount(selectedDiscount);
+    if (updatedAmount <= 0) {
+      clearDiscount();
+      return;
+    }
+    if (Math.abs(updatedAmount - discountAmount) > 0.01) {
+      setDiscountAmount(updatedAmount);
+      const descriptorParts = [selectedDiscount.label, selectedDiscount.description]
+        .map((part) => (typeof part === "string" ? part.trim() : ""))
+        .filter((part) => part.length > 0);
+      const descriptor = descriptorParts.length > 0 ? descriptorParts.join(" · ") : selectedDiscount.code;
+      setDiscountFeedback(`Aplicaste ${formatArs(updatedAmount)} con ${descriptor}.`);
+    }
+  }, [calculateDiscountAmount, clearDiscount, discountAmount, selectedDiscount, total]);
+
+  const handleApplyDiscount = useCallback(() => {
+    applyDiscountCode(discountCodeInput);
+  }, [applyDiscountCode, discountCodeInput]);
   const persistProfileSnapshot = useCallback(
     (data: Partial<OrderForm>) => {
       if (typeof window === "undefined") {
@@ -227,16 +418,6 @@ const Checkout: React.FC = () => {
     resumePendingFocus();
   };
 
-  const openWhatsAppUrl = (url: string) => {
-    const isIOS = /iphone|ipad|ipod/i.test(window.navigator.userAgent);
-
-    if (isIOS) {
-      window.location.href = url;
-    } else {
-      window.open(url, "_blank", "noopener,noreferrer");
-    }
-  };
-
   const resetCheckoutState = () => {
     clearCart();
     setForm(initialForm);
@@ -248,12 +429,13 @@ const Checkout: React.FC = () => {
       window.sessionStorage.setItem(
         "pt_last_order_context",
         JSON.stringify({
+          mode: "registered" as const,
           whatsappUrl: context.whatsappUrl,
           code: context.code,
           number: context.number,
           redirectStartedAt: Date.now(),
-          redirectDurationMs: REDIRECT_COUNTDOWN_MS,
-          whatsappTriggerDelayMs: WHATSAPP_AUTO_OPEN_DELAY_MS,
+          redirectDurationMs: REGISTERED_REDIRECT_COUNTDOWN_MS,
+          whatsappTriggerDelayMs: REGISTERED_WHATSAPP_TRIGGER_DELAY_MS,
           whatsappOpenedAt: null,
         })
       );
@@ -261,12 +443,27 @@ const Checkout: React.FC = () => {
       console.error("No se pudo guardar la última referencia de pedido", error);
     }
     resetCheckoutState();
-    navigate("/thanks", { replace: true });
+    navigate("/thanks", { replace: true, state: { origin: "registered" } });
   };
 
   const finalizeGuestOrder = (whatsappUrl: string) => {
+    try {
+      window.sessionStorage.setItem(
+        "pt_last_order_context",
+        JSON.stringify({
+          mode: "guest" as const,
+          whatsappUrl,
+          redirectStartedAt: Date.now(),
+          redirectDurationMs: GUEST_REDIRECT_COUNTDOWN_MS,
+          whatsappTriggerDelayMs: GUEST_WHATSAPP_TRIGGER_DELAY_MS,
+          whatsappOpenedAt: null,
+        })
+      );
+    } catch (error) {
+      console.error("No se pudo guardar la referencia del pedido invitado", error);
+    }
     resetCheckoutState();
-    openWhatsAppUrl(whatsappUrl);
+    navigate("/thanks", { replace: true, state: { origin: "guest" } });
   };
 
   const handleFormFocus = (
@@ -342,14 +539,18 @@ const Checkout: React.FC = () => {
         .join("\n");
 
       intro += `${itemsText}\n\n`;
-      intro += `\t\u{200B}💰 TOTAL: ${totalLabel}`;
+      intro += `\t\u{200B}💰 TOTAL: ${finalTotalLabel}`;
+      if (selectedDiscount && discountAmount > 0) {
+        const labelText = selectedDiscountDescriptor ?? selectedDiscount.code;
+        intro += `\n\t\u{200B}💸 Descuento aplicado: ${labelText} (-${formatArs(discountAmount)})`;
+      }
       intro += `\n\t\u{200B}🍖 Pollo deshuesado: ${accepted ? "Sí" : "No"}`;
       intro += `\n\t\u{200B}💳 Método de pago: ${form.paymentMethod}`;
       intro += `\n\t\u{200B}👤 Usuario: ${user?.displayName || user?.email || "Invitado"}`;
 
       return intro;
     },
-    [accepted, form, items, totalLabel, user]
+    [accepted, discountAmount, finalTotalLabel, form, items, selectedDiscount, selectedDiscountDescriptor, user]
   );
 
   const handleSubmit = async () => {
@@ -358,7 +559,7 @@ const Checkout: React.FC = () => {
     const cartItems = items as CartItem[];
     const purchaseSummary: StoredPurchase = {
       placedAt: new Date().toISOString(),
-      totalLabel,
+      totalLabel: finalTotalLabel,
       items: cartItems.map((item) => ({
         productId: String((item as { id: string | number }).id),
         label: "name" in item ? item.name : item.label,
@@ -416,12 +617,55 @@ const Checkout: React.FC = () => {
           };
         }),
         totalGross: Number(total.toFixed(2)),
-        totalNet: Number(total.toFixed(2)),
+        totalNet: Number(finalTotal.toFixed(2)),
         metadata: {
           acceptedUpsell: accepted,
           guestCheckout: !backendUserId,
         },
       };
+
+      if (selectedDiscount && discountAmount > 0) {
+        orderPayload.discountCode = selectedDiscount.code;
+        orderPayload.discountTotal = Number(discountAmount.toFixed(2));
+        orderPayload.metadata = {
+          ...orderPayload.metadata,
+          appliedDiscount: {
+            code: selectedDiscount.code,
+            amount: Number(discountAmount.toFixed(2)),
+            label: selectedDiscount.label ?? null,
+            description: selectedDiscount.description ?? null,
+          },
+        };
+      }
+
+      if (!isRegistered) {
+        const fallbackMessage = buildPedidoMessage();
+        const fallbackWhatsappUrl = waLink(WHATSAPP_NUMBER, fallbackMessage);
+
+        void api
+          .createOrder(orderPayload)
+          .catch((error) => console.error("No se pudo registrar el pedido del invitado", error));
+
+        const elapsedGuest = Date.now() - submitStart;
+        const remainingGuest = Math.max(0, GUEST_SUBMIT_TRANSITION_MS - elapsedGuest);
+
+        if (submitDelayRef.current) {
+          window.clearTimeout(submitDelayRef.current);
+        }
+
+        submitDelayRef.current = window.setTimeout(() => {
+          submitDelayRef.current = null;
+          try {
+            persistLastPurchase(purchaseSummary);
+          } catch (error) {
+            console.error("No se pudo guardar el resumen de compra del invitado", error);
+          }
+          setIsSubmitting(false);
+          finalizeGuestOrder(fallbackWhatsappUrl);
+        }, remainingGuest);
+
+        return;
+      }
 
       const createdOrder = await api.createOrder(orderPayload);
       const orderCode = formatOrderCode(createdOrder.number);
@@ -435,18 +679,6 @@ const Checkout: React.FC = () => {
         whatsappUrl,
         message: messageWithCode,
       };
-
-      if (!isRegistered) {
-        try {
-          persistLastPurchase(purchaseSummary);
-        } catch (error) {
-          console.error("No se pudo guardar el resumen de compra", error);
-        }
-        setIsSubmitting(false);
-        finalizeGuestOrder(whatsappUrl);
-        return;
-      }
-
     } catch (error) {
       console.error("No se pudo crear el pedido", error);
       setIsSubmitting(false);
@@ -492,7 +724,7 @@ const Checkout: React.FC = () => {
     }
 
     const elapsed = Date.now() - submitStart;
-    const remaining = Math.max(0, SUBMIT_TRANSITION_MS - elapsed);
+    const remaining = Math.max(0, REGISTERED_SUBMIT_TRANSITION_MS - elapsed);
 
     if (submitDelayRef.current) {
       window.clearTimeout(submitDelayRef.current);
@@ -604,23 +836,11 @@ const Checkout: React.FC = () => {
       );
     });
 
-  const timelinePosition = useMemo(() => {
-    if (isSubmitting) {
-      return 2;
-    }
-    return 1;
-  }, [isSubmitting]);
-
   if (!isRegistered) {
     return (
       <div ref={formTopRef} className="container checkout-shell checkout-shell--guest">
         <div className="checkout-shell__inner checkout-shell__inner--guest">
-          <header className="checkout-head checkout-head--guest">
-            <h1 className="checkout-head__title">Confirmá tu pedido</h1>
-            <p className="checkout-head__subtitle">
-              Completá tus datos y enviá el WhatsApp: nosotros seguimos tu pedido y te avisamos cuando esté listo.
-            </p>
-          </header>
+      
           {prefillNotice && <p className="prefill-note">{prefillNotice}</p>}
           <section className="checkout-card checkout-card--form">
             <div className="checkout-card__header">
@@ -695,9 +915,21 @@ const Checkout: React.FC = () => {
             ) : (
               <>
                 <ul className="checkout-summary__list">{renderSummaryList(summaryItemsToRender)}</ul>
-                <div className="checkout-summary__footer">
-                  <span>Total</span>
-                  <strong>{totalLabel}</strong>
+                <div className="checkout-summary__totals">
+                  <div className="checkout-summary__line">
+                    <span>Subtotal</span>
+                    <span>{formatArs(total)}</span>
+                  </div>
+                  {discountAmount > 0 && (
+                    <div className="checkout-summary__line checkout-summary__line--discount">
+                      <span>{selectedDiscountDescriptor ?? selectedDiscount?.code ?? "Descuento"}</span>
+                      <span>-{formatArs(discountAmount)}</span>
+                    </div>
+                  )}
+                  <div className="checkout-summary__line checkout-summary__line--total">
+                    <span>Total a pagar</span>
+                    <strong>{finalTotalLabel}</strong>
+                  </div>
                 </div>
                 <div className="checkout-summary__actions">
                   <button
@@ -740,40 +972,7 @@ const Checkout: React.FC = () => {
             Mandá el WhatsApp: tu pedido se prepara igual. Si volvés, acá te mostramos el estado y guardamos sorpresas para vos.
           </p>
         </header>
-        <section className="checkout-overview">
-          <div className="checkout-overview__status">
-            <span className="checkout-card__eyebrow">Seguimiento en curso</span>
-            <h2 className="checkout-card__title">Todo listo para enviar</h2>
-            <p className="checkout-overview__lead">
-              Revisá los datos, abrí el chat y, si querés, regresá para ver cómo avanza y sumar beneficios.
-            </p>
-          </div>
-          <ol className="checkout-timeline checkout-timeline--inline">
-            {TIMELINE_STEPS.map((step, index) => {
-              const position = index + 1;
-              const stateClass =
-                timelinePosition > position
-                  ? "is-complete"
-                  : timelinePosition === position
-                    ? "is-active"
-                    : "";
-              return (
-                <li key={step.title} className={`checkout-timeline__item ${stateClass}`}>
-                  <div className="checkout-timeline__badge" aria-hidden="true">
-                    {position}
-                  </div>
-                  <div className="checkout-timeline__body">
-                    <span className="checkout-timeline__title">{step.title}</span>
-                    <span className="checkout-timeline__text">{step.description}</span>
-                  </div>
-                </li>
-              );
-            })}
-          </ol>
-          {prefillNotice && (
-            <span className="checkout-overview__chip" role="status">{prefillNotice}</span>
-          )}
-        </section>
+        
         <div className="checkout-columns">
           <div className="checkout-primary">
             <section className="checkout-card checkout-card--form">
@@ -854,6 +1053,76 @@ const Checkout: React.FC = () => {
               ) : (
                 <>
                   <ul className="checkout-summary__list">{renderSummaryList(summaryItemsToRender)}</ul>
+                  {isRegistered && (
+                    <div className="checkout-discount" aria-label="Aplicar código de descuento">
+                      <div className="checkout-discount__header">
+                        <span>¿Tenés un código de descuento?</span>
+                        {selectedDiscount && (
+                          <button
+                            type="button"
+                            className="btn-soft btn-sm"
+                            onClick={clearDiscount}
+                          >
+                            Quitar código
+                          </button>
+                        )}
+                      </div>
+                      <div className="checkout-discount__field">
+                        <input
+                          type="text"
+                          name="discount"
+                          value={discountCodeInput}
+                          onChange={(event) => {
+                            const value = event.target.value.toUpperCase();
+                            setDiscountCodeInput(value);
+                            setDiscountError(null);
+                            if (!value) {
+                              setDiscountFeedback(null);
+                            }
+                          }}
+                          placeholder={availableDiscounts.length ? "Ingresá tu código o elegí uno" : "Ingresá tu código"}
+                          autoComplete="off"
+                          className="checkout-discount__input"
+                          inputMode="text"
+                        />
+                        <button type="button" className="btn-secondary btn-sm" onClick={handleApplyDiscount}>
+                          Aplicar
+                        </button>
+                      </div>
+                      {discountError && (
+                        <p className="checkout-discount__feedback checkout-discount__feedback--error">{discountError}</p>
+                      )}
+                      {discountFeedback && !discountError && (
+                        <p className="checkout-discount__feedback checkout-discount__feedback--success">{discountFeedback}</p>
+                      )}
+                      {availableDiscounts.length > 0 && (
+                        <div className="checkout-discount__chips" role="list">
+                          {availableDiscounts.map((entry) => (
+                            <button
+                              key={entry.id}
+                              type="button"
+                              title={[
+                                entry.label,
+                                entry.description,
+                              ]
+                                .map((part) => (typeof part === "string" ? part.trim() : ""))
+                                .filter((part) => part.length > 0)
+                                .join(" · ") || entry.code}
+                              className={`checkout-discount__chip${selectedDiscount?.code === entry.code ? " is-active" : ""}`}
+                              onClick={() => applyDiscountCode(entry.code)}
+                            >
+                              <span>{entry.code}</span>
+                              <small>
+                                {entry.percentage
+                                  ? `${Number(entry.percentage)}%`
+                                  : formatArs(Number(entry.value))}
+                              </small>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                   {isRegistered && items.length > SUMMARY_PREVIEW_COUNT && (
                     <button
                       type="button"
@@ -868,9 +1137,21 @@ const Checkout: React.FC = () => {
                           })`}
                     </button>
                   )}
-                  <div className="checkout-summary__footer">
-                    <span>Total</span>
-                    <strong>{totalLabel}</strong>
+                  <div className="checkout-summary__totals">
+                    <div className="checkout-summary__line">
+                      <span>Subtotal</span>
+                      <span>{formatArs(total)}</span>
+                    </div>
+                    {discountAmount > 0 && (
+                      <div className="checkout-summary__line checkout-summary__line--discount">
+                        <span>{selectedDiscountDescriptor ?? selectedDiscount?.code ?? "Descuento"}</span>
+                        <span>-{formatArs(discountAmount)}</span>
+                      </div>
+                    )}
+                    <div className="checkout-summary__line checkout-summary__line--total">
+                      <span>Total a pagar</span>
+                      <strong>{finalTotalLabel}</strong>
+                    </div>
                   </div>
                   <div className="checkout-summary__actions">
                     <button

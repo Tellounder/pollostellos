@@ -86,125 +86,126 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
               <p className="orders-modal__subtitle">
                 Actualizá tus datos de contacto y revisá tus estadísticas de pedidos.
               </p>
+        </div>
+        <button className="orders-close" type="button" onClick={onClose} aria-label="Cerrar">
+          ×
+        </button>
+      </header>
+      <div className="orders-modal__main">
+        {error && <p className="orders-error">{error}</p>}
+        {success && <p className="profile-success">{success}</p>}
+
+        {loading || !form ? (
+          <div className="orders-loading" aria-busy="true">
+            <div className="loader-ring loader-ring--sm">
+              <div></div>
+              <div></div>
+              <div></div>
+              <div></div>
             </div>
-            <button className="orders-close" type="button" onClick={onClose} aria-label="Cerrar">
-              ×
-            </button>
-          </header>
-
-          {error && <p className="orders-error">{error}</p>}
-          {success && <p className="profile-success">{success}</p>}
-
-          {loading || !form ? (
-            <div className="orders-loading" aria-busy="true">
-              <div className="loader-ring loader-ring--sm">
-                <div></div>
-                <div></div>
-                <div></div>
-                <div></div>
-              </div>
-              <span>Cargando perfil…</span>
+            <span>Cargando perfil…</span>
+          </div>
+        ) : (
+          <form className="profile-form" onSubmit={handleSubmit}>
+            <div className="profile-grid">
+              <label>
+                <span>Nombre</span>
+                <input
+                  type="text"
+                  name="firstName"
+                  value={form.firstName}
+                  onChange={handleChange}
+                  placeholder="Nombre"
+                />
+              </label>
+              <label>
+                <span>Apellido</span>
+                <input
+                  type="text"
+                  name="lastName"
+                  value={form.lastName}
+                  onChange={handleChange}
+                  placeholder="Apellido"
+                />
+              </label>
+              <label>
+                <span>Nombre visible</span>
+                <input
+                  type="text"
+                  name="displayName"
+                  value={form.displayName}
+                  onChange={handleChange}
+                  placeholder="Cómo aparece en la app"
+                />
+              </label>
+              <label>
+                <span>Teléfono</span>
+                <input
+                  type="tel"
+                  name="phone"
+                  value={form.phone}
+                  onChange={handleChange}
+                  placeholder="+54 9 ..."
+                />
+              </label>
+              <label className="profile-grid--full">
+                <span>Dirección</span>
+                <input
+                  type="text"
+                  name="addressLine"
+                  value={form.addressLine}
+                  onChange={handleChange}
+                  placeholder="Calle, número, piso…"
+                />
+              </label>
+              <label className="profile-grid--full">
+                <span>Notas de entrega</span>
+                <textarea
+                  name="addressNotes"
+                  value={form.addressNotes}
+                  onChange={handleChange}
+                  placeholder="Comentarios para el reparto"
+                  rows={2}
+                />
+              </label>
             </div>
-          ) : (
-            <form className="profile-form" onSubmit={handleSubmit}>
-              <div className="profile-grid">
-                <label>
-                  <span>Nombre</span>
-                  <input
-                    type="text"
-                    name="firstName"
-                    value={form.firstName}
-                    onChange={handleChange}
-                    placeholder="Nombre"
-                  />
-                </label>
-                <label>
-                  <span>Apellido</span>
-                  <input
-                    type="text"
-                    name="lastName"
-                    value={form.lastName}
-                    onChange={handleChange}
-                    placeholder="Apellido"
-                  />
-                </label>
-                <label>
-                  <span>Nombre visible</span>
-                  <input
-                    type="text"
-                    name="displayName"
-                    value={form.displayName}
-                    onChange={handleChange}
-                    placeholder="Cómo aparece en la app"
-                  />
-                </label>
-                <label>
-                  <span>Teléfono</span>
-                  <input
-                    type="tel"
-                    name="phone"
-                    value={form.phone}
-                    onChange={handleChange}
-                    placeholder="+54 9 ..."
-                  />
-                </label>
-                <label className="profile-grid--full">
-                  <span>Dirección</span>
-                  <input
-                    type="text"
-                    name="addressLine"
-                    value={form.addressLine}
-                    onChange={handleChange}
-                    placeholder="Calle, número, piso…"
-                  />
-                </label>
-                <label className="profile-grid--full">
-                  <span>Notas de entrega</span>
-                  <textarea
-                    name="addressNotes"
-                    value={form.addressNotes}
-                    onChange={handleChange}
-                    placeholder="Comentarios para el reparto"
-                    rows={2}
-                  />
-                </label>
-              </div>
 
-              {stats && (
-                <div className="profile-stats">
-                  <div>
-                    <span>Pedidos este mes</span>
-                    <strong>{stats.monthlyOrders}</strong>
-                  </div>
-                  <div>
-                    <span>Pedidos totales</span>
-                    <strong>{stats.lifetimeOrders}</strong>
-                  </div>
-                  <div>
-                    <span>Ventas netas acumuladas</span>
-                    <strong>{currencyFormatter.format(stats.lifetimeNetSales)}</strong>
-                  </div>
-                  <div>
-                    <span>Ahorro total en descuentos</span>
-                    <strong>{currencyFormatter.format(stats.discountUsage)}</strong>
-                  </div>
-                  <div>
-                    <span>¿Con bonus activo?</span>
-                    <strong>{stats.qualifiesForBonus ? "Sí" : "Todavía no"}</strong>
-                  </div>
+            {stats && (
+              <div className="profile-stats">
+                <div>
+                  <span>Pedidos este mes</span>
+                  <strong>{stats.monthlyOrders}</strong>
                 </div>
-              )}
+                <div>
+                  <span>Pedidos totales</span>
+                  <strong>{stats.lifetimeOrders}</strong>
+                </div>
+                <div>
+                  <span>Ventas netas acumuladas</span>
+                  <strong>{currencyFormatter.format(stats.lifetimeNetSales)}</strong>
+                </div>
+                <div>
+                  <span>Ahorro total en descuentos</span>
+                  <strong>{currencyFormatter.format(stats.discountUsage)}</strong>
+                </div>
+                <div>
+                  <span>¿Con bonus activo?</span>
+                  <strong>{stats.qualifiesForBonus ? "Sí" : "Todavía no"}</strong>
+                </div>
+              </div>
+            )}
 
-              <footer className="profile-actions">
-                <button className="btn-ghost" type="button" onClick={onClose}>
-                  Cancelar
-                </button>
-                <button className="btn-primary" type="submit" disabled={saving}>
-                  {saving ? "Guardando…" : "Guardar cambios"}
-                </button>
-              </footer>
-            </form>
-          )}
+            <footer className="profile-actions">
+              <button className="btn-ghost" type="button" onClick={onClose}>
+                Cancelar
+              </button>
+              <button className="btn-primary" type="submit" disabled={saving}>
+                {saving ? "Guardando…" : "Guardar cambios"}
+              </button>
+            </footer>
+          </form>
+        )}
+      </div>
         </div>
       </div>
     </OverlayPortal>

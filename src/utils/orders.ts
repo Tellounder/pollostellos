@@ -8,10 +8,11 @@ import {
 import type { ApiOrder, ApiUserDetail } from "utils/api";
 import type { ProfileFormValues } from "components/profile/ProfileModal";
 
-type DiscountEntry = {
+export type DiscountEntry = {
   id: string;
   code: string;
   label: string;
+  description?: string | null;
   value: string;
   percentage?: string | null;
   expiresAt?: string | null;
@@ -70,10 +71,21 @@ export const processDiscounts = (detail: ApiUserDetail, now: number = Date.now()
       return acc;
     }
 
+    const metadata = (code.metadata ?? {}) as Record<string, unknown>;
+    const label =
+      typeof metadata?.label === "string" && metadata.label.trim().length > 0
+        ? metadata.label.trim()
+        : code.type;
+    const description =
+      typeof metadata?.description === "string" && metadata.description.trim().length > 0
+        ? metadata.description.trim()
+        : null;
+
     acc.push({
       id: code.id,
       code: code.code,
-      label: code.type,
+      label,
+      description,
       value: code.value,
       percentage: code.percentage,
       expiresAt,

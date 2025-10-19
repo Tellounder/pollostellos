@@ -14,6 +14,7 @@ import {
 } from "utils/api";
 import { formatCurrency, formatOrderCode } from "utils/orders";
 import { CancelOrderModal } from "components/orders/CancelOrderModal";
+import ordersStyles from "./AdminOrders.module.css";
 
 type AdminSectionId = "orders" | "clients" | "discounts" | "codes" | "operations";
 
@@ -84,17 +85,17 @@ const ORDER_PIPELINE: Array<{ status: OrderStatus; label: string; helper: string
   {
     status: "PENDING",
     label: "Pendientes",
-    helper: "Pedidos recién ingresados esperando validación.",
+    helper: "Tomá el pedido cuando lo empieces a atender.",
   },
   {
     status: "PREPARING",
     label: "En preparación",
-    helper: "Pedidos en cocina o alistándose para despacho.",
+    helper: "Avisá cuando esté listo para retirar o enviar.",
   },
   {
     status: "CONFIRMED",
     label: "Listos para entregar",
-    helper: "Marcá como entregado cuando salieron de local.",
+    helper: "Confirmá en cuanto el cliente lo reciba.",
   },
   {
     status: "FULFILLED",
@@ -112,6 +113,14 @@ const statusLabels: Record<OrderStatus, string> = {
   CONFIRMED: "Listo",
   FULFILLED: "Completado",
   CANCELLED: "Cancelado",
+};
+
+const pipelineStatusClass: Partial<Record<OrderStatus, string>> = {
+  PENDING: ordersStyles.cardStatusPending,
+  PREPARING: ordersStyles.cardStatusPreparing,
+  CONFIRMED: ordersStyles.cardStatusConfirmed,
+  FULFILLED: ordersStyles.cardStatusFulfilled,
+  CANCELLED: ordersStyles.cardStatusCancelled,
 };
 
 const dateTimeFormatter = new Intl.DateTimeFormat("es-AR", {
@@ -152,6 +161,14 @@ const clampValue = (value: number) => Number.isFinite(value) ? Math.round((value
 
 export function AdminPanel({ initialSection = "orders" }: AdminPanelProps) {
   const { user, logout } = useAuth();
+  const cn = (...classes: Array<string | null | false | undefined>) => classes.filter(Boolean).join(" ");
+  const actionClassMap: Record<string, string> = {
+    primary: ordersStyles.actionPrimary,
+    secondary: ordersStyles.actionSecondary,
+    neutral: ordersStyles.actionSecondary,
+    danger: ordersStyles.actionDanger,
+    ghost: "",
+  };
 
   const [activeSection, setActiveSection] = useState<AdminSectionId>(initialSection);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -664,19 +681,19 @@ export function AdminPanel({ initialSection = "orders" }: AdminPanelProps) {
       actions.push(
         {
           key: "prepare",
-          label: "Preparar",
+          label: "Tomar pedido",
           intent: "neutral",
           handler: () => handlePrepareOrder(order.id),
         },
         {
           key: "ready",
-          label: "Listo",
+          label: "Listo para entregar",
           intent: "primary",
           handler: () => handleConfirmOrder(order.id),
         },
         {
           key: "cancel",
-          label: "Cancelar",
+          label: "Cancelar pedido",
           intent: "danger",
           handler: () => handleRequestCancelOrder(order.id),
         }
@@ -685,19 +702,19 @@ export function AdminPanel({ initialSection = "orders" }: AdminPanelProps) {
       actions.push(
         {
           key: "ready",
-          label: "Listo",
+          label: "Listo para entregar",
           intent: "primary",
           handler: () => handleConfirmOrder(order.id),
         },
         {
           key: "complete",
-          label: "Completar",
+          label: "Pedido entregado",
           intent: "neutral",
           handler: () => handleFulfillOrder(order.id),
         },
         {
           key: "cancel",
-          label: "Cancelar",
+          label: "Cancelar pedido",
           intent: "danger",
           handler: () => handleRequestCancelOrder(order.id),
         }
@@ -706,13 +723,13 @@ export function AdminPanel({ initialSection = "orders" }: AdminPanelProps) {
       actions.push(
         {
           key: "complete",
-          label: "Completar",
+          label: "Pedido entregado",
           intent: "primary",
           handler: () => handleFulfillOrder(order.id),
         },
         {
           key: "cancel",
-          label: "Cancelar",
+          label: "Cancelar pedido",
           intent: "danger",
           handler: () => handleRequestCancelOrder(order.id),
         }
@@ -721,319 +738,347 @@ export function AdminPanel({ initialSection = "orders" }: AdminPanelProps) {
     return actions;
   };
 
-  const renderOrdersSection = () => (
-    <section className="admin-section admin-section--orders" aria-label="Gestión de pedidos">
-      <header className="admin-section__head">
-        <div>
-          <h2>Pipeline de pedidos</h2>
-          <p>Arrastrá mentalmente el flujo: pendientes → preparación → listos → completados.</p>
-        </div>
-        <div className="admin-section__actions">
-          <button type="button" className="btn-ghost btn-pill" onClick={loadOrders} disabled={ordersLoading}>
-            {ordersLoading ? "Actualizando…" : "Actualizar"}
-          </button>
-        </div>
-      </header>
-      {ordersError && <p className="admin-notice admin-notice--error">{ordersError}</p>}
-      <div className="orders-overview">
-        <article>
-          <span>En cola</span>
-          <strong>{ordersByStatus.PENDING.length}</strong>
-          <small>{formatCurrency(operationsMetrics.pendingValue)}</small>
-        </article>
-        <article>
-          <span>En preparación</span>
-          <strong>{operationsMetrics.preparingCount}</strong>
-          <small>{formatCurrency(ordersByStatus.PREPARING.reduce((sum, order) => sum + (order.totalNet ?? order.totalGross ?? 0), 0))}</small>
-        </article>
-        <article>
-          <span>Listos para entrega</span>
-          <strong>{operationsMetrics.confirmedCount}</strong>
-          <small>{formatCurrency(ordersByStatus.CONFIRMED.reduce((sum, order) => sum + (order.totalNet ?? order.totalGross ?? 0), 0))}</small>
-        </article>
-        <article>
-          <span>Cerrados hoy</span>
-          <strong>{operationsMetrics.fulfilledToday}</strong>
-          <small>{formatCurrency(operationsMetrics.fulfilledTodayValue)}</small>
-        </article>
-      </div>
-      <div className="orders-workspace">
-        <div className="orders-pipeline">
-          {ORDER_PIPELINE.map((column) => (
-            <section key={column.status} className="orders-pipeline__column">
-              <header>
-                <div>
-                  <span>{column.label}</span>
-                  <small>{column.helper}</small>
-                </div>
-                <span className="orders-pipeline__badge">{ordersByStatus[column.status].length}</span>
-              </header>
-              <div className="orders-pipeline__list">
-                {ordersByStatus[column.status].length === 0 ? (
-                  <p className="orders-pipeline__empty">Sin pedidos en esta etapa.</p>
-                ) : (
-                  ordersByStatus[column.status].map((order) => {
-                    const customerName = order.metadata?.customer?.name ?? "Sin identificar";
-                    const address = order.metadata?.delivery?.addressLine ?? "Retira en local";
-                    const placedAt = order.placedAt ?? order.createdAt;
-                    const total = formatCurrency(order.totalNet ?? order.totalGross ?? 0);
-                    const isSelected = selectedOrderId === order.id;
-                    const cardActions = renderOrderActions(order);
+  const renderOrdersSection = () => {
+    const stats = [
+      {
+        label: "En cola",
+        value: ordersByStatus.PENDING.length,
+        helper: formatCurrency(operationsMetrics.pendingValue),
+      },
+      {
+        label: "En preparación",
+        value: operationsMetrics.preparingCount,
+        helper: formatCurrency(ordersByStatus.PREPARING.reduce((sum, order) => sum + (order.totalNet ?? order.totalGross ?? 0), 0)),
+      },
+      {
+        label: "Listos para entrega",
+        value: operationsMetrics.confirmedCount,
+        helper: formatCurrency(ordersByStatus.CONFIRMED.reduce((sum, order) => sum + (order.totalNet ?? order.totalGross ?? 0), 0)),
+      },
+      {
+        label: "Cerrados hoy",
+        value: operationsMetrics.fulfilledToday,
+        helper: formatCurrency(operationsMetrics.fulfilledTodayValue),
+      },
+    ];
+
+    const detailContent = selectedOrder ? (
+      <>
+        <header className={ordersStyles.detailHeader}>
+          <div>
+            <span>Pedido</span>
+            <h3>PT {formatOrderCode(selectedOrder.number)}</h3>
+            <p>Creado {formatOrderTimestamp(selectedOrder.createdAt)}</p>
+          </div>
+          <span className={cn(ordersStyles.statusChip, pipelineStatusClass[selectedOrder.status] ?? ordersStyles.cardStatusPending)}>
+            {statusLabels[selectedOrder.status]}
+          </span>
+        </header>
+
+        <div className={ordersStyles.foldGroup}>
+          <div>
+            <button
+              type="button"
+              className={cn(ordersStyles.foldButton, orderFold.timeline && ordersStyles.foldButtonOpen)}
+              onClick={() => toggleOrderFold("timeline")}
+              aria-expanded={orderFold.timeline}
+            >
+              <span>Línea de tiempo</span>
+              <span className={ordersStyles.foldChevron} aria-hidden="true">⌄</span>
+            </button>
+            {orderFold.timeline && (
+              <div className={ordersStyles.foldBody}>
+                <div className={ordersStyles.timelineDetail} aria-label="Linea de tiempo del pedido">
+                  {ORDER_SEQUENCE.map((step) => {
+                    const isReached = ORDER_SEQUENCE.indexOf(selectedOrder.status) >= ORDER_SEQUENCE.indexOf(step);
+                    const timestamp =
+                      step === "PENDING"
+                        ? selectedOrder.placedAt ?? selectedOrder.createdAt
+                        : step === "PREPARING"
+                        ? selectedOrder.preparingAt
+                        : step === "CONFIRMED"
+                        ? selectedOrder.confirmedAt
+                        : selectedOrder.fulfilledAt;
                     return (
-                      <article
-                        key={order.id}
-                        className={`order-card${isSelected ? " is-active" : ""}`}
-                        onClick={() => setSelectedOrderId(order.id)}
-                      >
-                        <div className="order-card__head">
-                          <span className="order-card__code">PT {formatOrderCode(order.number)}</span>
-                          <span className={`order-card__status order-card__status--${order.status.toLowerCase()}`}>
-                            {statusLabels[order.status]}
-                          </span>
-                        </div>
-                        <div className="order-card__body">
-                          <p className="order-card__customer">{customerName}</p>
-                          <p className="order-card__address" title={address}>
-                            {address}
-                          </p>
-                          <div className="order-card__meta">
-                            <span>{total}</span>
-                            <span>{shortTimeFormatter.format(new Date(placedAt))}</span>
-                          </div>
-                        </div>
-                        {cardActions.length > 0 && (
-                          <div className="order-card__actions">
-                            {cardActions.map((action) => (
-                              <button
-                                key={action.key}
-                                type="button"
-                                className={`chip-action chip-action--${action.intent}`}
-                                onClick={(event) => {
-                                  event.stopPropagation();
-                                  action.handler();
-                                }}
-                                disabled={actionLoadingId === order.id || ordersLoading}
-                              >
-                                {action.label}
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                      </article>
+                      <div key={step} className={cn(ordersStyles.timelineStep, isReached && ordersStyles.timelineStepComplete)}>
+                        <span>{statusLabels[step]}</span>
+                        <small>{timestamp ? shortTimeFormatter.format(new Date(timestamp)) : "—"}</small>
+                      </div>
                     );
-                  })
-                )}
+                  })}
+                </div>
               </div>
-            </section>
+            )}
+          </div>
+
+          <div>
+            <button
+              type="button"
+              className={cn(ordersStyles.foldButton, orderFold.info && ordersStyles.foldButtonOpen)}
+              onClick={() => toggleOrderFold("info")}
+              aria-expanded={orderFold.info}
+            >
+              <span>Datos y totales</span>
+              <span className={ordersStyles.foldChevron} aria-hidden="true">⌄</span>
+            </button>
+            {orderFold.info && (
+              <div className={ordersStyles.foldBody}>
+                <div className={ordersStyles.infoGrid}>
+                  <article className={ordersStyles.infoCard}>
+                    <span>Cliente</span>
+                    <strong>{selectedOrder.metadata?.customer?.name ?? "Sin identificar"}</strong>
+                    <small>{selectedOrder.metadata?.customer?.phone ?? "Sin teléfono"}</small>
+                  </article>
+                  <article className={ordersStyles.infoCard}>
+                    <span>Entrega</span>
+                    <strong>{selectedOrder.metadata?.delivery?.addressLine ?? "Retira en local"}</strong>
+                    <small>{selectedOrder.metadata?.delivery?.notes ?? "Sin notas"}</small>
+                  </article>
+                  <article className={ordersStyles.infoCard}>
+                    <span>Total</span>
+                    <strong>{formatCurrency(selectedOrder.totalNet ?? selectedOrder.totalGross ?? 0)}</strong>
+                    {selectedOrder.discountTotal > 0 && <small>Ahorrado: {formatCurrency(selectedOrder.discountTotal)}</small>}
+                  </article>
+                  <article className={ordersStyles.infoCard}>
+                    <span>Notas</span>
+                    <strong>{selectedOrder.note || selectedOrder.metadata?.notes || "Sin notas adicionales"}</strong>
+                  </article>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div>
+            <button
+              type="button"
+              className={cn(ordersStyles.foldButton, orderFold.items && ordersStyles.foldButtonOpen)}
+              onClick={() => toggleOrderFold("items")}
+              aria-expanded={orderFold.items}
+            >
+              <span>Ítems del pedido</span>
+              <span className={ordersStyles.foldChevron} aria-hidden="true">⌄</span>
+            </button>
+            {orderFold.items && (
+              <div className={ordersStyles.foldBody}>
+                <div className={ordersStyles.itemsList} aria-label="Productos del pedido">
+                  <header>
+                    <h4>Ítems ({selectedOrder.normalizedItems.length})</h4>
+                    <span>
+                      {formatCurrency(
+                        selectedOrder.normalizedItems.reduce((sum, item) => sum + (item.lineTotal ?? 0), 0)
+                      )}
+                    </span>
+                  </header>
+                  <ul>
+                    {selectedOrder.normalizedItems.map((item) => (
+                      <li key={`${item.label}-${item.quantity}`}>
+                        <div>
+                          <strong>{item.label}</strong>
+                          {item.side && <small>{item.side}</small>}
+                        </div>
+                        <span>x{item.quantity}</span>
+                        <span>{formatCurrency(item.lineTotal ?? 0)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div>
+            <button
+              type="button"
+              className={cn(ordersStyles.foldButton, orderFold.chat && ordersStyles.foldButtonOpen)}
+              onClick={() => toggleOrderFold("chat")}
+              aria-expanded={orderFold.chat}
+            >
+              <span>Mensajes</span>
+              <span className={ordersStyles.foldChevron} aria-hidden="true">⌄</span>
+            </button>
+            {orderFold.chat && (
+              <div className={ordersStyles.foldBody}>
+                <div className={ordersStyles.chat} aria-label="Mensajes">
+                  <div className={ordersStyles.chatLog}>
+                    {chatLoading ? (
+                      <p className={ordersStyles.chatPlaceholder} aria-busy="true">
+                        Cargando mensajes…
+                      </p>
+                    ) : messages.length === 0 ? (
+                      <p className={ordersStyles.chatPlaceholder}>
+                        Todavía no hay mensajes. Podés dejar una nota para avisar tiempos o promociones.
+                      </p>
+                    ) : (
+                      <ul>
+                        {messages.map((entry) => {
+                          const author = entry.authorType.toLowerCase();
+                          const isCustomer = author === "customer" || author === "user";
+                          return (
+                            <li
+                              key={entry.id}
+                              className={cn(ordersStyles.chatMessage, author === "admin" && ordersStyles.chatMessageAdmin, isCustomer && ordersStyles.chatMessageUser)}
+                            >
+                              <span className={ordersStyles.chatText}>{extractMessage(entry.payload)}</span>
+                              <small>
+                                {entry.authorType === "ADMIN" ? "Equipo" : "Cliente"} · {dateTimeFormatter.format(new Date(entry.createdAt))}
+                              </small>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    )}
+                  </div>
+                  <form className={ordersStyles.chatForm} onSubmit={(event) => handleSendMessage(event)}>
+                    <textarea
+                      placeholder="Ej: Estamos preparando tus pollos, sale en 10 minutos."
+                      value={messageDraft}
+                      onChange={(event) => setMessageDraft(event.target.value)}
+                      disabled={sendingMessage}
+                      rows={3}
+                    />
+                    <div className={ordersStyles.chatActions}>
+                      <button
+                        type="submit"
+                        className="btn-primary btn-pill"
+                        disabled={sendingMessage || messageDraft.trim().length === 0}
+                      >
+                        {sendingMessage ? "Enviando…" : "Enviar"}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </>
+    ) : (
+      <div className={ordersStyles.detailEmpty}>
+        <p>Elegí un pedido para ver el detalle, timeline y mensajes.</p>
+      </div>
+    );
+
+    return (
+      <section className={cn("admin-section admin-section--orders", ordersStyles.root)} aria-label="Gestión de pedidos">
+        <header className={cn("admin-section__head", ordersStyles.header)}>
+          <div className={ordersStyles.titleGroup}>
+            <h2>Pipeline de pedidos</h2>
+            <p>Visualizá el flujo completo: pendientes, preparación, listos y completados.</p>
+          </div>
+          <div className="admin-section__actions">
+            <button type="button" className="btn-ghost btn-pill" onClick={loadOrders} disabled={ordersLoading}>
+              {ordersLoading ? "Actualizando…" : "Actualizar"}
+            </button>
+          </div>
+        </header>
+        {ordersError && <p className="admin-notice admin-notice--error">{ordersError}</p>}
+
+        <div className={ordersStyles.stats}>
+          {stats.map((stat) => (
+            <article key={stat.label} className={ordersStyles.statCard}>
+              <span>{stat.label}</span>
+              <strong>{stat.value}</strong>
+              <small>{stat.helper}</small>
+            </article>
           ))}
         </div>
-        <aside className="order-detail" aria-live="polite">
-          {selectedOrder ? (
-            <div className="order-detail__card">
-              <header className="order-detail__header">
-                <div>
-                  <span>Pedido</span>
-                  <h3>PT {formatOrderCode(selectedOrder.number)}</h3>
-                  <p>Creado {formatOrderTimestamp(selectedOrder.createdAt)}</p>
-                </div>
-                <span className={`order-chip order-chip--${selectedOrder.status.toLowerCase()}`}>
-                  {statusLabels[selectedOrder.status]}
-                </span>
-              </header>
-              <div className="fold">
-                <button
-                  type="button"
-                  className={`fold__head${orderFold.timeline ? " is-open" : ""}`}
-                  onClick={() => toggleOrderFold("timeline")}
-                  aria-expanded={orderFold.timeline}
-                >
-                  <span>Línea de tiempo</span>
-                  <span className="fold__chevron" aria-hidden="true">⌄</span>
-                </button>
-                {orderFold.timeline && (
-                  <div className="fold__body">
-                    <div className="order-detail__timeline" aria-label="Linea de tiempo del pedido">
-                      {ORDER_SEQUENCE.map((step) => {
-                        const isReached = ORDER_SEQUENCE.indexOf(selectedOrder.status) >= ORDER_SEQUENCE.indexOf(step);
-                        const timestamp =
-                          step === "PENDING"
-                            ? selectedOrder.placedAt ?? selectedOrder.createdAt
-                            : step === "PREPARING"
-                            ? selectedOrder.preparingAt
-                            : step === "CONFIRMED"
-                            ? selectedOrder.confirmedAt
-                            : selectedOrder.fulfilledAt;
+
+        <div className={ordersStyles.workspace}>
+          <div className={ordersStyles.pipeline}>
+            {ORDER_PIPELINE.map((column) => {
+              const columnOrders = ordersByStatus[column.status];
+              return (
+                <section key={column.status} className={ordersStyles.column}>
+                  <header>
+                    <div>
+                      <span>{column.label}</span>
+                      <small>{column.helper}</small>
+                    </div>
+                    <span className={ordersStyles.badge}>{columnOrders.length}</span>
+                  </header>
+                  {columnOrders.length === 0 ? (
+                    <p className={ordersStyles.empty}>Sin pedidos en esta etapa.</p>
+                  ) : (
+                    <div className={ordersStyles.list}>
+                      {columnOrders.map((order) => {
+                        const customerName = order.metadata?.customer?.name ?? "Sin identificar";
+                        const address = order.metadata?.delivery?.addressLine ?? "Retira en local";
+                        const placedAt = order.placedAt ?? order.createdAt;
+                        const total = formatCurrency(order.totalNet ?? order.totalGross ?? 0);
+                        const isSelected = selectedOrderId === order.id;
+                        const cardActions = renderOrderActions(order);
                         return (
-                          <div key={step} className={`order-detail__step${isReached ? " is-complete" : ""}`}>
-                            <span>{statusLabels[step]}</span>
-                            <small>{timestamp ? shortTimeFormatter.format(new Date(timestamp)) : "—"}</small>
-                          </div>
+                          <article
+                            key={order.id}
+                            className={cn(ordersStyles.card, isSelected && ordersStyles.cardActive)}
+                            onClick={() => setSelectedOrderId(order.id)}
+                          >
+                            <div className={ordersStyles.cardHead}>
+                              <span className={ordersStyles.cardCode}>PT {formatOrderCode(order.number)}</span>
+                              <span className={cn(ordersStyles.cardStatus, pipelineStatusClass[order.status] ?? ordersStyles.cardStatusPending)}>
+                                {statusLabels[order.status]}
+                              </span>
+                            </div>
+                            <div className={ordersStyles.cardBody}>
+                              <p className={ordersStyles.cardCustomer}>{customerName}</p>
+                              <p className={ordersStyles.cardAddress} title={address}>
+                                {address}
+                              </p>
+                              <div className={ordersStyles.cardMeta}>
+                                <span>{total}</span>
+                                <span>{shortTimeFormatter.format(new Date(placedAt))}</span>
+                              </div>
+                            </div>
+                            {cardActions.length > 0 && (
+                              <div className={ordersStyles.actionGroup}>
+                                {cardActions.map((action) => (
+                                  <button
+                                    key={action.key}
+                                    type="button"
+                                    className={cn(ordersStyles.actionChip, actionClassMap[action.intent] ?? ordersStyles.actionSecondary)}
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      action.handler();
+                                    }}
+                                    disabled={actionLoadingId === order.id || ordersLoading}
+                                  >
+                                    {action.label}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </article>
                         );
                       })}
                     </div>
-                  </div>
-                )}
-              </div>
-              <div className="fold">
-                <button
-                  type="button"
-                  className={`fold__head${orderFold.info ? " is-open" : ""}`}
-                  onClick={() => toggleOrderFold("info")}
-                  aria-expanded={orderFold.info}
-                >
-                  <span>Datos y totales</span>
-                  <span className="fold__chevron" aria-hidden="true">⌄</span>
-                </button>
-                {orderFold.info && (
-                  <div className="fold__body">
-                    <div className="order-detail__info">
-                      <article>
-                        <span>Cliente</span>
-                        <strong>{selectedOrder.metadata?.customer?.name ?? "Sin identificar"}</strong>
-                        <small>{selectedOrder.metadata?.customer?.phone ?? "Sin teléfono"}</small>
-                      </article>
-                      <article>
-                        <span>Entrega</span>
-                        <strong>{selectedOrder.metadata?.delivery?.addressLine ?? "Retira en local"}</strong>
-                        <small>{selectedOrder.metadata?.delivery?.notes ?? "Sin notas"}</small>
-                      </article>
-                      <article>
-                        <span>Total</span>
-                        <strong>{formatCurrency(selectedOrder.totalNet ?? selectedOrder.totalGross ?? 0)}</strong>
-                        {selectedOrder.discountTotal > 0 && (
-                          <small>Ahorrado: {formatCurrency(selectedOrder.discountTotal)}</small>
-                        )}
-                      </article>
-                      <article>
-                        <span>Notas</span>
-                        <strong>{selectedOrder.note || selectedOrder.metadata?.notes || "Sin notas adicionales"}</strong>
-                      </article>
-                    </div>
-                  </div>
-                )}
-              </div>
-              <div className="fold">
-                <button
-                  type="button"
-                  className={`fold__head${orderFold.items ? " is-open" : ""}`}
-                  onClick={() => toggleOrderFold("items")}
-                  aria-expanded={orderFold.items}
-                >
-                  <span>Ítems del pedido</span>
-                  <span className="fold__chevron" aria-hidden="true">⌄</span>
-                </button>
-                {orderFold.items && (
-                  <div className="fold__body">
-                    <div className="order-detail__items" aria-label="Productos del pedido">
-                      <header>
-                        <h4>Ítems ({selectedOrder.normalizedItems.length})</h4>
-                        <span>
-                          {formatCurrency(
-                            selectedOrder.normalizedItems.reduce((sum, item) => sum + (item.lineTotal ?? 0), 0)
-                          )}
-                        </span>
-                      </header>
-                      <ul>
-                        {selectedOrder.normalizedItems.map((item) => (
-                          <li key={`${item.label}-${item.quantity}`}>
-                            <div>
-                              <strong>{item.label}</strong>
-                              {item.side && <small>{item.side}</small>}
-                            </div>
-                            <span>x{item.quantity}</span>
-                            <span>{formatCurrency(item.lineTotal ?? 0)}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  </div>
-                )}
-              </div>
-              <div className="fold">
-                <button
-                  type="button"
-                  className={`fold__head${orderFold.chat ? " is-open" : ""}`}
-                  onClick={() => toggleOrderFold("chat")}
-                  aria-expanded={orderFold.chat}
-                >
-                  <span>Mensajes</span>
-                  <span className="fold__chevron" aria-hidden="true">⌄</span>
-                </button>
-                {orderFold.chat && (
-                  <div className="fold__body">
-                    <div className="order-detail__chat" aria-label="Mensajes">
-                      <div className="order-detail__chat-log">
-                        {chatLoading ? (
-                          <p className="order-detail__chat-placeholder" aria-busy="true">
-                            Cargando mensajes…
-                          </p>
-                        ) : messages.length === 0 ? (
-                          <p className="order-detail__chat-placeholder">
-                            Todavía no hay mensajes. Podés dejar una nota para avisar tiempos o promociones.
-                          </p>
-                        ) : (
-                          <ul>
-                            {messages.map((entry) => (
-                              <li
-                                key={entry.id}
-                                className={`order-detail__chat-message order-detail__chat-message--${entry.authorType.toLowerCase()}`}
-                              >
-                                <span className="order-detail__chat-text">{extractMessage(entry.payload)}</span>
-                                <small>
-                                  {entry.authorType === "ADMIN" ? "Equipo" : "Cliente"} ·{" "}
-                                  {dateTimeFormatter.format(new Date(entry.createdAt))}
-                                </small>
-                              </li>
-                            ))}
-                          </ul>
-                        )}
-                      </div>
-                      <form className="order-detail__chat-form" onSubmit={(event) => handleSendMessage(event)}>
-                        <textarea
-                          placeholder="Ej: Estamos preparando tus pollos, sale en 10 minutos."
-                          value={messageDraft}
-                          onChange={(event) => setMessageDraft(event.target.value)}
-                          disabled={sendingMessage}
-                          rows={3}
-                        />
-                        <div className="order-detail__chat-actions">
-                          <button
-                            type="submit"
-                            className="btn-primary btn-pill"
-                            disabled={sendingMessage || messageDraft.trim().length === 0}
-                          >
-                            {sendingMessage ? "Enviando…" : "Enviar"}
-                          </button>
-                        </div>
-                      </form>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          ) : (
-            <div className="order-detail__empty">
-              <p>Elegí un pedido para ver el detalle, timeline y mensajes.</p>
-            </div>
-          )}
-        </aside>
-      </div>
-      {ordersByStatus.CANCELLED.length > 0 && (
-        <footer className="orders-cancelled">
-          <h3>Cancelados recientes</h3>
-          <div className="orders-cancelled__list">
-            {ordersByStatus.CANCELLED.slice(0, 6).map((order) => (
-              <article key={order.id}>
-                <strong>PT {formatOrderCode(order.number)}</strong>
-                <span>{formatOrderTimestamp(order.cancelledAt)}</span>
-                <small>{order.cancellationReason ?? "Sin motivo"}</small>
-              </article>
-            ))}
+                  )}
+                </section>
+              );
+            })}
           </div>
-        </footer>
-      )}
-    </section>
-  );
+          <aside className={ordersStyles.detail} aria-live="polite">
+            {detailContent}
+          </aside>
+        </div>
+
+        {ordersByStatus.CANCELLED.length > 0 && (
+          <footer className={ordersStyles.cancelled}>
+            <h3>Cancelados recientes</h3>
+            <div className={ordersStyles.cancelledList}>
+              {ordersByStatus.CANCELLED.slice(0, 6).map((order) => (
+                <article key={order.id} className={ordersStyles.cancelledItem}>
+                  <strong>PT {formatOrderCode(order.number)}</strong>
+                  <span>{formatOrderTimestamp(order.cancelledAt)}</span>
+                  <small>{order.cancellationReason ?? "Sin motivo"}</small>
+                </article>
+              ))}
+            </div>
+          </footer>
+        )}
+      </section>
+    );
+  };
+
 
   const renderCustomersSection = () => (
     <section className="admin-section admin-section--clients" aria-label="Gestión de clientes">
@@ -1653,11 +1698,8 @@ export function AdminPanel({ initialSection = "orders" }: AdminPanelProps) {
                 className={`admin-hub__nav-item${activeSection === section.id ? " is-active" : ""}`}
                 onClick={() => handleSectionChange(section.id)}
               >
-                <span aria-hidden>{section.emoji}</span>
-                <div>
-                  <strong>{section.label}</strong>
-                  <small>{section.description}</small>
-                </div>
+                <strong>{section.label}</strong>
+                <small>{section.description}</small>
               </button>
             ))}
           </nav>
@@ -1675,9 +1717,7 @@ export function AdminPanel({ initialSection = "orders" }: AdminPanelProps) {
             </button>
             <div>
               <span>{selectedSection.description}</span>
-              <h1>
-                {selectedSection.emoji} {selectedSection.label}
-              </h1>
+              <h1>{selectedSection.label}</h1>
             </div>
             <div className="admin-hub__user">
               <span>{user.displayName ?? user.email ?? "Admin"}</span>

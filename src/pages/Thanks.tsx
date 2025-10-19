@@ -4,12 +4,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-const DEFAULT_REDIRECT_DURATION_MS = 30000;
-const DEFAULT_WHATSAPP_TRIGGER_DELAY_MS = 12000;
+const DEFAULT_REDIRECT_DURATION_MS = 35000;
+const DEFAULT_WHATSAPP_TRIGGER_DELAY_MS = 25000;
 const RING_SIZE = 172;
 const RING_STROKE = 16;
 
 type LastOrderContext = {
+  mode?: "registered" | "guest";
   whatsappUrl?: string | null;
   code?: string | null;
   number?: number | null;
@@ -35,11 +36,13 @@ export function Thanks() {
         return {};
       }
       const normalized: LastOrderContext = {
+        mode: parsed.mode === "guest" ? "guest" : "registered",
         whatsappUrl: parsed.whatsappUrl,
         code: parsed.code ?? null,
         number: parsed.number ?? null,
         redirectDurationMs: parsed.redirectDurationMs ?? DEFAULT_REDIRECT_DURATION_MS,
         redirectStartedAt: parsed.redirectStartedAt ?? Date.now(),
+        whatsappTriggerDelayMs: parsed.whatsappTriggerDelayMs ?? DEFAULT_WHATSAPP_TRIGGER_DELAY_MS,
         whatsappOpenedAt: parsed.whatsappOpenedAt ?? null,
       };
       window.sessionStorage.setItem("pt_last_order_context", JSON.stringify(normalized));
@@ -91,12 +94,16 @@ export function Thanks() {
     }
   }, []);
 
-  const redirectDurationMs = DEFAULT_REDIRECT_DURATION_MS;
+  const mode = lastOrderContext.mode === "guest" ? "guest" : "registered";
+  const isGuestFlow = mode === "guest";
+
+  const redirectDurationMs = lastOrderContext.redirectDurationMs ?? DEFAULT_REDIRECT_DURATION_MS;
   const redirectStartedAt = lastOrderContext.redirectStartedAt ?? Date.now();
   const redirectDeadline = redirectStartedAt + redirectDurationMs;
-  const whatsappTriggerDelayMs = DEFAULT_WHATSAPP_TRIGGER_DELAY_MS;
+  const whatsappTriggerDelayMs =
+    lastOrderContext.whatsappTriggerDelayMs ?? DEFAULT_WHATSAPP_TRIGGER_DELAY_MS;
   const whatsappTriggerAt = redirectStartedAt + whatsappTriggerDelayMs;
-  const totalCountdownSeconds = Math.max(1, Math.round(DEFAULT_REDIRECT_DURATION_MS / 1000));
+  const totalCountdownSeconds = Math.max(1, Math.round(redirectDurationMs / 1000));
 
   const [countdown, setCountdown] = useState(() => {
     if (!redirectDeadline) {
@@ -127,13 +134,16 @@ export function Thanks() {
   }, [clearContext, lastOrderContext.whatsappUrl, navigate]);
 
   useEffect(() => {
-    if (countdown > 0) {
-      return;
+    if (lastOrderContext.whatsappUrl && countdown <= 0 && !redirectRef.current) {
+      redirectRef.current = true;
+      clearContext();
+      if (isGuestFlow) {
+        navigate("/", { replace: true });
+      } else {
+        navigate("/", { replace: true, state: { openOrders: true } });
+      }
     }
-    redirectRef.current = true;
-    clearContext();
-    navigate("/", { replace: true, state: { openOrders: true } });
-  }, [clearContext, countdown, navigate]);
+  }, [clearContext, countdown, isGuestFlow, lastOrderContext.whatsappUrl, navigate]);
 
   const launchWhatsApp = useCallback((url: string) => {
     const isIOS = /iphone|ipad|ipod/i.test(window.navigator.userAgent);
@@ -168,86 +178,100 @@ export function Thanks() {
     whatsappTriggerAt,
   ]);
 
-  const orderCodeLabel = lastOrderContext.code ? `Pedido ${lastOrderContext.code}` : "Tu pedido";
+  const orderCodeLabel = isGuestFlow
+    ? "¡Gracias por tu compra!"
+    : lastOrderContext.code
+    ? `Pedido ${lastOrderContext.code}`
+    : "Tu pedido";
+  const leadCopy = isGuestFlow
+    ? "En unos segundos te llevamos a WhatsApp. Registrate la próxima vez para sumar beneficios exclusivos."
+    : "Ahora te llevamos a WhatsApp, con todo el paquete cargado.";
+  const noteCopy = isGuestFlow
+    ? "Volvé pronto: registrate para seguir tus pedidos y desbloquear premios."
+    : "Volvé acá si querés ver el progreso y beneficios.";
   const ringRadius = (RING_SIZE - RING_STROKE) / 2;
   const ringCircumference = 2 * Math.PI * ringRadius;
   const countdownRatio = Math.max(0, Math.min(1, countdown / totalCountdownSeconds));
   const ringOffset = ringCircumference * (1 - countdownRatio);
   return (
-    <section className="thanks-shell" aria-live="polite">
-      <div
-        className="card thanks-card thanks-card--countdown"
-        style={{ textAlign: "center", backdropFilter: "blur(18px)", background: "rgba(20, 20, 20, 0.45)" }}
-      >
-        <h2 className="thanks-card__title" style={{ marginBottom: 12 }}>
-          {orderCodeLabel}
-        </h2>
-        <p className="thanks-progress__lead" style={{ marginBottom: 28 }}>
-          Ahora te llevamos a WhatsApp, con todo el paquete cargado.
-        </p>
-        <div className="thanks-progress thanks-progress--ring" role="status" aria-live="assertive">
-          <div
-            className="thanks-progress__ring thanks-progress__ring--glass"
-            style={{ position: "relative", display: "inline-block" }}
-          >
-            <svg
-              width={RING_SIZE}
-              height={RING_SIZE}
-              viewBox={`0 0 ${RING_SIZE} ${RING_SIZE}`}
-              role="presentation"
-              style={{ filter: "drop-shadow(0 12px 28px rgba(0,0,0,0.35))" }}
-            >
-              <circle
-                cx={RING_SIZE / 2}
-                cy={RING_SIZE / 2}
-                r={ringRadius}
-                stroke="rgba(255, 255, 255, 0.12)"
-                strokeWidth={RING_STROKE}
-                fill="none"
-              />
-              <circle
-                cx={RING_SIZE / 2}
-                cy={RING_SIZE / 2}
-                r={ringRadius}
-                stroke="url(#thanks-ring-gradient)"
-                strokeWidth={RING_STROKE}
-                strokeLinecap="round"
-                strokeDasharray={ringCircumference}
-                strokeDashoffset={ringOffset}
-                fill="none"
-                transform={`rotate(-90 ${RING_SIZE / 2} ${RING_SIZE / 2})`}
-              />
-              <defs>
-                <linearGradient id="thanks-ring-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#ffbd5a" />
-                  <stop offset="100%" stopColor="#ff7a2f" />
-                </linearGradient>
-              </defs>
-            </svg>
+    <>
+      <title>¡Gracias por tu pedido! | Pollos Tello&apos;s</title>
+      <meta name="robots" content="noindex, nofollow" />
+      <section className="thanks-shell" aria-live="polite">
+        <div
+          className="card thanks-card thanks-card--countdown"
+          style={{ textAlign: "center", backdropFilter: "blur(18px)", background: "rgba(20, 20, 20, 0.45)" }}
+        >
+          <h2 className="thanks-card__title" style={{ marginBottom: 12 }}>
+            {orderCodeLabel}
+          </h2>
+          <p className="thanks-progress__lead" style={{ marginBottom: 28 }}>
+            {leadCopy}
+          </p>
+          <div className="thanks-progress thanks-progress--ring" role="status" aria-live="assertive">
             <div
-              className="thanks-progress__timer thanks-progress__timer--center"
-              style={{
-                position: "absolute",
-                top: "50%",
-                left: "50%",
-                transform: "translate(-50%, -50%)",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                color: "#fff",
-                gap: 2,
-                pointerEvents: "none",
-              }}
+              className="thanks-progress__ring thanks-progress__ring--glass"
+              style={{ position: "relative", display: "inline-block" }}
             >
-              <span>{countdown}</span>
-              <small>seg</small>
+              <svg
+                width={RING_SIZE}
+                height={RING_SIZE}
+                viewBox={`0 0 ${RING_SIZE} ${RING_SIZE}`}
+                role="presentation"
+                style={{ filter: "drop-shadow(0 12px 28px rgba(0,0,0,0.35))" }}
+              >
+                <circle
+                  cx={RING_SIZE / 2}
+                  cy={RING_SIZE / 2}
+                  r={ringRadius}
+                  stroke="rgba(255, 255, 255, 0.12)"
+                  strokeWidth={RING_STROKE}
+                  fill="none"
+                />
+                <circle
+                  cx={RING_SIZE / 2}
+                  cy={RING_SIZE / 2}
+                  r={ringRadius}
+                  stroke="url(#thanks-ring-gradient)"
+                  strokeWidth={RING_STROKE}
+                  strokeLinecap="round"
+                  strokeDasharray={ringCircumference}
+                  strokeDashoffset={ringOffset}
+                  fill="none"
+                  transform={`rotate(-90 ${RING_SIZE / 2} ${RING_SIZE / 2})`}
+                />
+                <defs>
+                  <linearGradient id="thanks-ring-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#ffbd5a" />
+                    <stop offset="100%" stopColor="#ff7a2f" />
+                  </linearGradient>
+                </defs>
+              </svg>
+              <div
+                className="thanks-progress__timer thanks-progress__timer--center"
+                style={{
+                  position: "absolute",
+                  top: "50%",
+                  left: "50%",
+                  transform: "translate(-50%, -50%)",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  color: "#fff",
+                  gap: 2,
+                  pointerEvents: "none",
+                }}
+              >
+                <span>{countdown}</span>
+                <small>seg</small>
+              </div>
             </div>
           </div>
+          <p className="thanks-progress__note" style={{ marginTop: 28 }}>
+            {noteCopy}
+          </p>
         </div>
-        <p className="thanks-progress__note" style={{ marginTop: 28 }}>
-          Volvé acá si querés ver el progreso y beneficios.
-        </p>
-      </div>
-    </section>
+      </section>
+    </>
   );
 }

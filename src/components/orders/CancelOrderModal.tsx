@@ -46,7 +46,7 @@ export const CancelOrderModal: React.FC<CancelOrderModalProps> = ({ open, loadin
   return (
     <OverlayPortal>
       <div className="orders-overlay" role="dialog" aria-modal="true" aria-label="Cancelar pedido">
-        <form className="orders-modal" onSubmit={handleSubmit}>
+        <form className="orders-modal orders-modal--compact" onSubmit={handleSubmit}>
           <header className="orders-modal__header">
             <div>
               <h2>Cancelar pedido</h2>
@@ -58,30 +58,31 @@ export const CancelOrderModal: React.FC<CancelOrderModalProps> = ({ open, loadin
               ×
             </button>
           </header>
-
-          <div className="orders-content" style={{ flexDirection: "column", gap: 16 }}>
-            <div className="orders-quick-reasons" role="list">
-              {QUICK_REASONS.map((suggestion) => (
-                <button
-                  type="button"
-                  key={suggestion}
-                  className={`orders-quick-reasons__chip${reason === suggestion ? " is-active" : ""}`}
-                  onClick={() => setReason(suggestion)}
-                >
-                  {suggestion}
-                </button>
-              ))}
+          <div className="orders-modal__main">
+            <div className="orders-content" style={{ flexDirection: "column", gap: 16 }}>
+              <div className="orders-quick-reasons" role="list">
+                {QUICK_REASONS.map((suggestion) => (
+                  <button
+                    type="button"
+                    key={suggestion}
+                    className={`orders-quick-reasons__chip${reason === suggestion ? " is-active" : ""}`}
+                    onClick={() => setReason(suggestion)}
+                  >
+                    {suggestion}
+                  </button>
+                ))}
+              </div>
+              <label className="profile-grid--full">
+                <span>Motivo (opcional)</span>
+                <textarea
+                  name="reason"
+                  rows={3}
+                  value={reason}
+                  onChange={(event) => setReason(event.target.value)}
+                  placeholder="Ej: Cliente no responde, stock agotado, etc."
+                />
+              </label>
             </div>
-            <label className="profile-grid--full">
-              <span>Motivo (opcional)</span>
-              <textarea
-                name="reason"
-                rows={3}
-                value={reason}
-                onChange={(event) => setReason(event.target.value)}
-                placeholder="Ej: Cliente no responde, stock agotado, etc."
-              />
-            </label>
           </div>
 
           <footer className="orders-modal__footer" style={{ display: "flex", gap: 12 }}>

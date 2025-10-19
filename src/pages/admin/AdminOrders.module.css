@@ -1,0 +1,512 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(18px, 3vw, 28px);
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: clamp(12px, 2vw, 18px);
+  flex-wrap: wrap;
+}
+
+.titleGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.titleGroup h2 {
+  margin: 0 0 4px;
+  font-family: var(--font-serif);
+  font-size: clamp(1.4rem, 2.4vw, 1.8rem);
+  color: var(--text-strong);
+}
+
+.titleGroup p {
+  margin: 0;
+  color: var(--text-muted);
+  max-width: 56ch;
+}
+
+.stats {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+.statCard {
+  border-radius: calc(var(--radius-md) - 2px);
+  border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  padding: 14px 16px;
+  background: color-mix(in srgb, var(--card) 94%, rgba(255, 255, 255, 0.06));
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: var(--text-muted);
+}
+
+.statCard strong {
+  font-size: 1.4rem;
+  color: var(--text-strong);
+}
+
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: clamp(16px, 3vw, 28px);
+  align-items: start;
+}
+
+.pipeline {
+  display: grid;
+  gap: clamp(14px, 3vw, 20px);
+}
+
+.column {
+  border-radius: calc(var(--radius-md) - 2px);
+  border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  background: color-mix(in srgb, var(--card) 96%, rgba(255, 255, 255, 0.05));
+  padding: clamp(12px, 2.4vw, 18px);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.column header {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+}
+
+.column header span:first-child {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  background: color-mix(in srgb, var(--primary) 24%, transparent);
+  color: color-mix(in srgb, var(--primary) 80%, var(--text-strong) 20%);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.empty {
+  margin: 0;
+  padding: 16px;
+  border-radius: calc(var(--radius-md) - 2px);
+  border: 1px dashed color-mix(in srgb, var(--border) 70%, transparent);
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  text-align: center;
+  background: color-mix(in srgb, var(--card) 94%, rgba(255, 255, 255, 0.04));
+}
+
+.card {
+  border-radius: calc(var(--radius-md) - 2px);
+  border: 1px solid color-mix(in srgb, var(--border) 65%, transparent);
+  background: color-mix(in srgb, var(--card) 96%, rgba(255, 255, 255, 0.05));
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  cursor: pointer;
+  transition: border-color 0.18s ease, transform 0.18s ease;
+}
+
+.card:hover {
+  border-color: color-mix(in srgb, var(--primary) 24%, transparent);
+  transform: translateY(-2px);
+}
+
+.cardActive {
+  border-color: color-mix(in srgb, var(--primary) 50%, transparent);
+  box-shadow: 0 18px 40px rgba(200, 16, 46, 0.16);
+}
+
+.cardHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.cardCode {
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.cardStatus {
+  display: inline-flex;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border: 1px solid currentColor;
+}
+
+.cardStatusPending {
+  color: color-mix(in srgb, var(--warning) 75%, var(--text-strong) 25%);
+}
+
+.cardStatusPreparing {
+  color: #d97706;
+}
+
+.cardStatusConfirmed {
+  color: #0f766e;
+}
+
+.cardStatusFulfilled {
+  color: #1d4ed8;
+}
+
+.cardStatusCancelled {
+  color: #b91c1c;
+}
+
+.cardBody {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--text-muted);
+}
+
+.cardCustomer {
+  margin: 0;
+  color: var(--text-strong);
+  font-weight: 600;
+}
+
+.cardAddress {
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+.cardMeta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+}
+
+.actionGroup {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.actionChip {
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.actionChip:hover:enabled {
+  transform: translateY(-1px);
+}
+
+.actionPrimary {
+  background: color-mix(in srgb, var(--primary) 20%, transparent);
+  color: color-mix(in srgb, var(--primary) 90%, var(--text-strong) 10%);
+  border-color: color-mix(in srgb, var(--primary) 28%, transparent);
+}
+
+.actionSecondary {
+  background: color-mix(in srgb, rgba(59, 130, 246, 0.1), transparent);
+  color: #1d4ed8;
+  border-color: rgba(59, 130, 246, 0.3);
+}
+
+.actionDanger {
+  background: color-mix(in srgb, rgba(248, 113, 113, 0.15), transparent);
+  color: #b91c1c;
+  border-color: rgba(248, 113, 113, 0.35);
+}
+
+.detail {
+  border-radius: calc(var(--radius-md) - 2px);
+  border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  background: color-mix(in srgb, var(--card) 97%, rgba(255, 255, 255, 0.05));
+  padding: clamp(16px, 2.4vw, 20px);
+  min-height: 480px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.detailEmpty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  border: 1px dashed color-mix(in srgb, var(--border) 65%, transparent);
+  border-radius: calc(var(--radius-md) - 2px);
+  padding: 24px;
+}
+
+.detailHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.detailHeader h3 {
+  margin: 2px 0 0;
+  font-family: var(--font-serif);
+  font-size: 1.3rem;
+}
+
+.statusChip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border: 1px solid currentColor;
+}
+
+.foldGroup {
+  border-top: 1px solid color-mix(in srgb, var(--border) 65%, transparent);
+  padding-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.foldButton {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border: none;
+  background: transparent;
+  color: var(--text-strong);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.foldButton span:first-child {
+  font-weight: 600;
+}
+
+.foldChevron {
+  transition: transform 0.2s ease;
+}
+
+.foldButtonOpen {}
+
+.foldButtonOpen .foldChevron {
+  transform: rotate(180deg);
+}
+
+.foldBody {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.timelineDetail {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+}
+
+.chat {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.timelineStep {
+  border-radius: calc(var(--radius-md) - 2px);
+  border: 1px solid color-mix(in srgb, var(--border) 68%, transparent);
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: color-mix(in srgb, var(--card) 95%, rgba(255, 255, 255, 0.05));
+}
+
+.timelineStepComplete {
+  border-color: color-mix(in srgb, rgba(74, 201, 155, 0.6), transparent);
+  background: color-mix(in srgb, rgba(74, 201, 155, 0.18), transparent);
+}
+
+.infoGrid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.infoCard {
+  border-radius: calc(var(--radius-sm) + 2px);
+  border: 1px solid color-mix(in srgb, var(--border) 68%, transparent);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: color-mix(in srgb, var(--card) 96%, rgba(255, 255, 255, 0.04));
+}
+
+
+.itemsList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.itemsList header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.itemsList header h4 {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--text-strong);
+}
+
+.itemsList ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.itemsList li {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(0, 2fr) auto auto;
+  align-items: center;
+  font-size: 0.9rem;
+}
+
+.chatLog {
+  max-height: 220px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.chatMessage {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border-radius: calc(var(--radius-sm) + 2px);
+  padding: 8px 12px;
+  background: color-mix(in srgb, rgba(59, 130, 246, 0.12), transparent);
+  color: var(--text-strong);
+}
+
+.chatMessageAdmin {
+  align-items: flex-start;
+  background: color-mix(in srgb, rgba(200, 16, 46, 0.18), transparent);
+}
+
+.chatText {
+  font-weight: 500;
+}
+
+.chatMessageUser {
+  align-items: flex-end;
+  text-align: right;
+}
+
+.chatPlaceholder {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.chatForm {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.chatActions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.chatForm textarea {
+  width: 100%;
+  border-radius: calc(var(--radius-sm) + 2px);
+  border: 1px solid color-mix(in srgb, var(--border) 65%, transparent);
+  padding: 10px;
+  resize: vertical;
+  min-height: 90px;
+  background: color-mix(in srgb, var(--card) 94%, rgba(255, 255, 255, 0.05));
+}
+
+.cancelled {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.cancelled h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: var(--text-strong);
+}
+
+.cancelledList {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+.cancelledItem {
+  border-radius: calc(var(--radius-sm) + 2px);
+  border: 1px solid color-mix(in srgb, var(--border) 65%, transparent);
+  padding: 10px 12px;
+  background: color-mix(in srgb, var(--card) 96%, rgba(255, 255, 255, 0.04));
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--text-muted);
+}
+
+.cancelledItem strong {
+  color: var(--text-strong);
+}
+
+@media (max-width: 960px) {
+  .workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

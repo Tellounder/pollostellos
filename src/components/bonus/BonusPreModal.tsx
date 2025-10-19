@@ -1,5 +1,4 @@
 import React, { useEffect, useRef } from "react";
-import useScrollLock from "hooks/useScrollLock";
 import { OverlayPortal } from "components/common/OverlayPortal";
 
 interface Props {
@@ -13,7 +12,6 @@ interface Props {
 export const BonusPreModal: React.FC<Props> = ({ open, userName, totalPurchases, onConfirm, onCancel }) => {
   const confirmRef = useRef<HTMLButtonElement | null>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
-  useScrollLock(open);
 
   useEffect(() => {
     if (!open || typeof document === "undefined") {

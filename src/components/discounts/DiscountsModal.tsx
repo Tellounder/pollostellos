@@ -1,17 +1,6 @@
 import React from "react";
 import { OverlayPortal } from "components/common/OverlayPortal";
-import type { ShareCouponSummary } from "utils/orders";
-
-type ActiveDiscount = {
-  id: string;
-  code: string;
-  label: string;
-  value: string;
-  percentage?: string | null;
-  expiresAt?: string | null;
-  usesRemaining: number;
-  totalUses: number;
-};
+import type { DiscountEntry, ShareCouponSummary } from "utils/orders";
 
 type DiscountHistoryItem = {
   id: string;
@@ -28,11 +17,12 @@ type DiscountsModalProps = {
   error?: string | null;
   totalSavings: number;
   totalRedemptions: number;
-  activeDiscounts: ActiveDiscount[];
+  activeDiscounts: DiscountEntry[];
   history: DiscountHistoryItem[];
   shareCoupons: ShareCouponSummary[];
   onShareCoupon: (coupon: ShareCouponSummary) => Promise<void> | void;
   onRefresh: () => void;
+  onApplyDiscount?: (discount: DiscountEntry) => void;
 };
 
 const currencyFormatter = new Intl.NumberFormat("es-AR", {
@@ -58,7 +48,11 @@ export const DiscountsModal: React.FC<DiscountsModalProps> = ({
   shareCoupons,
   onShareCoupon,
   onRefresh,
+  onApplyDiscount,
 }) => {
+  const [sharingId, setSharingId] = React.useState<string | null>(null);
+  const [applyMessage, setApplyMessage] = React.useState<string | null>(null);
+
   React.useEffect(() => {
     if (!open) return undefined;
     const onKeyDown = (event: KeyboardEvent) => {
@@ -68,9 +62,22 @@ export const DiscountsModal: React.FC<DiscountsModalProps> = ({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [open, onClose]);
 
-  if (!open) return null;
+  React.useEffect(() => {
+    if (!open) {
+      setSharingId(null);
+      setApplyMessage(null);
+    }
+  }, [open]);
 
-  const [sharingId, setSharingId] = React.useState<string | null>(null);
+  React.useEffect(() => {
+    if (!applyMessage) {
+      return;
+    }
+    const timeout = window.setTimeout(() => setApplyMessage(null), 3200);
+    return () => window.clearTimeout(timeout);
+  }, [applyMessage]);
+
+  if (!open) return null;
 
   const handleShare = async (coupon: ShareCouponSummary) => {
     try {
@@ -98,6 +105,7 @@ export const DiscountsModal: React.FC<DiscountsModalProps> = ({
               ×
             </button>
           </header>
+          <div className="orders-modal__main">
 
           {error && <p className="orders-error">{error}</p>}
 
@@ -112,33 +120,37 @@ export const DiscountsModal: React.FC<DiscountsModalProps> = ({
               <span>Cargando descuentos…</span>
             </div>
           ) : (
-            <div className="discounts-layout">
-              <aside className="discounts-column discounts-column--summary">
-                <div className="discount-card discounts-card--summary">
-                  <div className="discount-card__header">
-                    <h3>Resumen</h3>
+            <div className="discounts-content">
+              <div className="discounts-column">
+                <section className="discount-panel discount-panel--summary" aria-label="Resumen de ahorros">
+                  <div className="discount-panel__header">
+                    <div>
+                      <h3>Resumen</h3>
+                      <p>Últimos ahorros registrados en tu cuenta.</p>
+                    </div>
                     <button className="btn-ghost btn-sm" type="button" onClick={onRefresh}>
                       Actualizar
                     </button>
                   </div>
-                  <div className="discount-summary__grid">
+                  <dl className="discount-summary">
                     <div>
-                      <span className="discount-summary__label">Ahorro total</span>
-                      <strong className="discount-summary__value">{currencyFormatter.format(totalSavings)}</strong>
+                      <dt>Ahorro total</dt>
+                      <dd>{currencyFormatter.format(totalSavings)}</dd>
                     </div>
                     <div>
-                      <span className="discount-summary__label">Canjes realizados</span>
-                      <strong className="discount-summary__value">{totalRedemptions}</strong>
+                      <dt>Canjes realizados</dt>
+                      <dd>{totalRedemptions}</dd>
                     </div>
-                  </div>
-                </div>
+                  </dl>
+                </section>
 
-                <section className="discount-card" aria-labelledby="discounts-share">
-                  <div className="discount-card__header">
+                <section className="discount-panel" aria-labelledby="discounts-share">
+                  <div className="discount-panel__header">
                     <h3 id="discounts-share">Códigos para compartir</h3>
+                    <p>Enviá estos enlaces por WhatsApp para sumar beneficios.</p>
                   </div>
                   {shareCoupons.length === 0 ? (
-                    <p className="orders-empty">
+                    <p className="discount-panel__empty">
                       Generamos tres códigos al mes para que compartas por WhatsApp y sumes beneficios. Tocá “Actualizar” si no ves los tuyos.
                     </p>
                   ) : (
@@ -168,15 +180,17 @@ export const DiscountsModal: React.FC<DiscountsModalProps> = ({
                     </ul>
                   )}
                 </section>
-              </aside>
+              </div>
 
               <div className="discounts-column">
-                <section className="discount-card" aria-labelledby="discounts-activos">
-                  <div className="discount-card__header">
+                <section className="discount-panel" aria-labelledby="discounts-activos">
+                  <div className="discount-panel__header">
                     <h3 id="discounts-activos">Códigos activos</h3>
+                    <p>Aplicalos durante el checkout para obtener descuentos inmediatos.</p>
+                    {applyMessage && <p className="discount-panel__feedback">{applyMessage}</p>}
                   </div>
                   {activeDiscounts.length === 0 ? (
-                    <p className="orders-empty">Hoy no tenés descuentos activos. ¡Seguí sumando pedidos y referidos!</p>
+                    <p className="discount-panel__empty">Hoy no tenés descuentos activos. ¡Seguí sumando pedidos y referidos!</p>
                   ) : (
                     <ul className="discounts-list">
                       {activeDiscounts.map((code) => (
@@ -186,22 +200,47 @@ export const DiscountsModal: React.FC<DiscountsModalProps> = ({
                             <span className="discounts-item__value">{resolveDiscountLabel(code)}</span>
                           </div>
                           <div className="discounts-item__meta">
+                            {code.label && <span>{code.label}</span>}
+                            {code.description && <span>{code.description}</span>}
                             <span>Usos restantes: {code.usesRemaining}</span>
                             <span>Canjes totales: {code.totalUses}</span>
                             {code.expiresAt && <span>Vence: {dateFormatter.format(new Date(code.expiresAt))}</span>}
                           </div>
+                          {onApplyDiscount && (
+                            <div className="discounts-item__actions">
+                              <button
+                                type="button"
+                                className="btn-secondary btn-sm"
+                                onClick={() => {
+                                  try {
+                                    window.sessionStorage.setItem("pt_checkout_discount", code.code);
+                                    setApplyMessage(`Listo: ${code.code} se aplicará en tu checkout.`);
+                                  } catch (error) {
+                                    console.error("No se pudo guardar el código para el checkout", error);
+                                    setApplyMessage("No pudimos guardar el código. Probá copiarlo manualmente.");
+                                  }
+                                  if (onApplyDiscount) {
+                                    onApplyDiscount(code);
+                                  }
+                                }}
+                              >
+                                Aplicar en checkout
+                              </button>
+                            </div>
+                          )}
                         </li>
                       ))}
                     </ul>
                   )}
                 </section>
 
-                <section className="discount-card" aria-labelledby="discounts-historial">
-                  <div className="discount-card__header">
+                <section className="discount-panel" aria-labelledby="discounts-historial">
+                  <div className="discount-panel__header">
                     <h3 id="discounts-historial">Historial de ahorros</h3>
+                    <p>Consultá cuánto aplicaste en pedidos anteriores.</p>
                   </div>
                   {history.length === 0 ? (
-                    <p className="orders-empty">Todavía no aplicaste descuentos. Cuando lo hagas, los verás acá.</p>
+                    <p className="discount-panel__empty">Todavía no aplicaste descuentos. Cuando lo hagas, los verás acá.</p>
                   ) : (
                     <ul className="discounts-history">
                       {history.map((item) => (
@@ -222,6 +261,7 @@ export const DiscountsModal: React.FC<DiscountsModalProps> = ({
               </div>
             </div>
           )}
+      </div>
           <footer className="orders-modal__footer">
             <button className="btn-primary" type="button" onClick={onClose}>
               Listo
@@ -233,7 +273,7 @@ export const DiscountsModal: React.FC<DiscountsModalProps> = ({
   );
 };
 
-const resolveDiscountLabel = (code: ActiveDiscount) => {
+const resolveDiscountLabel = (code: DiscountEntry) => {
   if (code.percentage) {
     return `${parseFloat(code.percentage)}%`;
   }

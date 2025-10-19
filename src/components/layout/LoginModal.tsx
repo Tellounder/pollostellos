@@ -1,8 +1,9 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth, TERMS_ACCEPTED_KEY, TERMS_PENDING_KEY } from "hooks/useAuth";
 import { FaXmark } from "react-icons/fa6";
 import { FcGoogle } from "react-icons/fc";
 import { Link } from "react-router-dom";
+import { OverlayPortal } from "components/common/OverlayPortal";
 
 type Props = {
   open: boolean;
@@ -24,16 +25,20 @@ export const LoginModal: React.FC<Props> = ({ open, onClose }) => {
   });
   const primaryButtonRef = useRef<HTMLButtonElement>(null);
 
-  useEffect(() => {
-    if (!open) {
-      document.body.style.overflow = "";
-      return;
-    }
-
-    document.body.style.overflow = "hidden";
+  const handleClose = useCallback(() => {
     setStatus("idle");
     setError(null);
     setIsRegistering(false);
+    onClose();
+  }, [onClose]);
+
+  useEffect(() => {
+    if (!open) {
+      setStatus("idle");
+      setError(null);
+      setIsRegistering(false);
+      return;
+    }
 
     const timer = window.setTimeout(() => {
       primaryButtonRef.current?.focus({ preventScroll: true });
@@ -49,18 +54,10 @@ export const LoginModal: React.FC<Props> = ({ open, onClose }) => {
     window.addEventListener("keydown", handleKey);
 
     return () => {
-      document.body.style.overflow = "";
       window.clearTimeout(timer);
       window.removeEventListener("keydown", handleKey);
     };
-  }, [open]);
-
-  const handleClose = () => {
-    setStatus("idle");
-    setError(null);
-    setIsRegistering(false);
-    onClose();
-  };
+  }, [handleClose, open]);
 
   const handleAuth = async () => {
     if (status === "loading" || !acceptedTerms) return;
@@ -100,16 +97,29 @@ export const LoginModal: React.FC<Props> = ({ open, onClose }) => {
     setError(null);
   };
 
-  if (!open) return null;
+  useEffect(() => {
+    console.log("[LoginModal] open:", open);
+  }, [open]);
+
+  if (!open) {
+    return null;
+  }
 
   return (
-    <div className="modal" role="dialog" aria-modal="true" aria-labelledby="auth-modal-title" aria-describedby="auth-modal-desc">
-      <div className="box auth-modal" role="document">
-        <button className="modal__close" type="button" onClick={handleClose} aria-label="Cerrar ventana">
-          <FaXmark aria-hidden />
-        </button>
-        <h3 id="auth-modal-title">{isRegistering ? "Registrarse" : "Iniciar sesión"}</h3>
-        <p id="auth-modal-desc" className="modal__lead">
+    <OverlayPortal>
+      <div
+        className="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="auth-modal-title"
+        aria-describedby="auth-modal-desc"
+      >
+        <div className="box auth-modal" role="document">
+          <button className="modal__close" type="button" onClick={handleClose} aria-label="Cerrar ventana">
+            <FaXmark aria-hidden />
+          </button>
+          <h3 id="auth-modal-title">{isRegistering ? "Registrarse" : "Iniciar sesión"}</h3>
+          <p id="auth-modal-desc" className="modal__lead">
           {isRegistering
             ? "Creá una cuenta para guardar tus pedidos favoritos y recibir promos personalizadas."
             : "Iniciá sesión para acceder a tus pedidos guardados y repetir tus favoritos al instante."}
@@ -157,10 +167,11 @@ export const LoginModal: React.FC<Props> = ({ open, onClose }) => {
         <button className="modal__link" type="button" onClick={toggleMode}>
           {isRegistering ? "¿Ya tenés cuenta? Iniciá sesión" : "¿No tenés cuenta? Registrate"}
         </button>
-        <button className="btn-ghost modal__secondary" type="button" onClick={handleClose}>
-          Cerrar
-        </button>
+          <button className="btn-ghost modal__secondary" type="button" onClick={handleClose}>
+            Cerrar
+          </button>
+        </div>
       </div>
-    </div>
+    </OverlayPortal>
   );
 };

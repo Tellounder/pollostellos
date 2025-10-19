@@ -100,10 +100,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const firstNameUser = useMemo(() => {
-    if (!user) return null;
+    if (!user) {
+      return null;
+    }
+    const [firstWord] = (user.displayName ?? "").split(" ");
     return {
       ...user,
-      displayName: user.displayName?.split(" ")[0] ?? user.displayName,
+      displayName: firstWord || user.displayName || undefined,
     } as User;
   }, [user]);
 

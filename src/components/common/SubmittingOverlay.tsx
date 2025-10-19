@@ -1,10 +1,7 @@
 import React from "react";
-import useScrollLock from "hooks/useScrollLock";
 import { OverlayPortal } from "components/common/OverlayPortal";
 
 export const SubmittingOverlay: React.FC<{ active: boolean }> = ({ active }) => {
-  useScrollLock(active);
-
   if (!active) return null;
 
   return (

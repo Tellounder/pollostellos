@@ -4,7 +4,6 @@
 import React from "react";
 import type { Product } from "store/cart";
 import { isExtra } from "utils/constants";
-import useScrollLock from "hooks/useScrollLock";
 import { OverlayPortal } from "components/common/OverlayPortal";
 
 type Props = {
@@ -16,8 +15,6 @@ type Props = {
 };
 
 export const UpsellModal: React.FC<Props> = ({ open, countdown, item, onAccept, onCancel }) => {
-  useScrollLock(open);
-
   if (!open || !item) return null;
 
   const label = isExtra(item) ? item.label : item.name;

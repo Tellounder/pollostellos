@@ -89,14 +89,37 @@ export function AccessActions({
 
   return (
     <div className="home-actions home-actions--guest">
-      <button className="btn-primary home-actions__primary" onClick={onStartAsGuest} aria-label="Continuar como invitado">
+      <button
+        type="button"
+        className="btn-primary home-actions__primary"
+        onClick={onStartAsGuest}
+        aria-label="Continuar como invitado"
+      >
         Continuar como invitado
       </button>
       <div className="home-actions__grid home-actions__grid--guest">
-        <button className="btn-soft btn-sm" onClick={onOpenLogin}>
+        <button
+          type="button"
+          className="btn-soft btn-sm"
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            console.log("[AccessActions] click login");
+            onOpenLogin();
+          }}
+        >
           Iniciar sesión
         </button>
-        <button className="btn-soft btn-sm btn-soft--accent" onClick={onOpenLogin}>
+        <button
+          type="button"
+          className="btn-soft btn-sm btn-soft--accent"
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            console.log("[AccessActions] click register");
+            onOpenLogin();
+          }}
+        >
           Registrarse
         </button>
       </div>
