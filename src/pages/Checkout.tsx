@@ -58,6 +58,8 @@ const REGISTERED_WHATSAPP_TRIGGER_DELAY_MS = 25000;
 const GUEST_SUBMIT_TRANSITION_MS = 3000;
 const GUEST_REDIRECT_COUNTDOWN_MS = 10000;
 const GUEST_WHATSAPP_TRIGGER_DELAY_MS = 10000;
+const SHARE_COUPON_PERCENTAGE = 5;
+const SHARE_CODE_PATTERN = /^TELLO\d{4}-[A-Z0-9]{6}$/;
 
 const Checkout: React.FC = () => {
   const { items, addItem, setQty, total, clearCart } = useCart();
@@ -82,7 +84,9 @@ const Checkout: React.FC = () => {
   const [discountAmount, setDiscountAmount] = useState(0);
   const [discountFeedback, setDiscountFeedback] = useState<string | null>(null);
   const [discountError, setDiscountError] = useState<string | null>(null);
+  const [discountListOpen, setDiscountListOpen] = useState(false);
   const isRegistered = Boolean(user);
+  const wasRegisteredRef = useRef(isRegistered);
   const profileStorageKey = useMemo(() => {
     if (!backendUserId) return null;
     return `pt_checkout_profile_${backendUserId}`;
@@ -100,29 +104,47 @@ const Checkout: React.FC = () => {
   );
   const finalTotal = useMemo(() => Math.max(total - discountAmount, 0), [total, discountAmount]);
   const finalTotalLabel = useMemo(() => formatArs(finalTotal), [finalTotal]);
-  const selectedDiscountDescriptor = useMemo(() => {
-    if (!selectedDiscount) {
-      return null;
-    }
-    const parts = [selectedDiscount.label, selectedDiscount.description]
+  const hasAvailableDiscounts = availableDiscounts.length > 0;
+  const describeDiscount = useCallback((entry: DiscountEntry) => {
+    const parts = [entry.label, entry.description]
       .map((part) => (typeof part === "string" ? part.trim() : ""))
       .filter((part) => part.length > 0);
-    if (parts.length > 0) {
-      return `${parts.join(" · ")} (${selectedDiscount.code})`;
-    }
-    return selectedDiscount.code;
-  }, [selectedDiscount]);
+    return parts.length > 0 ? parts.join(" · ") : entry.code;
+  }, []);
+
+  const selectedDiscountDescriptor = useMemo(
+    () => (selectedDiscount ? `${describeDiscount(selectedDiscount)} (${selectedDiscount.code})` : null),
+    [describeDiscount, selectedDiscount]
+  );
 
   const calculateDiscountAmount = useCallback(
     (entry: DiscountEntry) => {
       const base = total;
-      const percentage = entry.percentage ? Number(entry.percentage) : null;
+      const percentage =
+        entry.sharePercentage ?? (entry.percentage ? Number(entry.percentage) : null);
       let computed = percentage ? base * (percentage / 100) : Number(entry.value);
       if (!Number.isFinite(computed)) computed = 0;
       computed = Math.min(Math.max(computed, 0), base);
       return computed;
     },
     [total]
+  );
+
+  const buildShareDiscountEntry = useCallback(
+    (code: string): DiscountEntry => ({
+      id: `share-${code}`,
+      code,
+      label: "Código compartido",
+      description: "5% OFF referido",
+      value: "0",
+      percentage: SHARE_COUPON_PERCENTAGE.toString(),
+      expiresAt: undefined,
+      usesRemaining: 1,
+      totalUses: 0,
+      origin: "share",
+      sharePercentage: SHARE_COUPON_PERCENTAGE,
+    }),
+    []
   );
 
   const applyDiscountCode = useCallback(
@@ -136,8 +158,12 @@ const Checkout: React.FC = () => {
         return false;
       }
 
-      const found = source.find((entry) => entry.code.toUpperCase() === normalized);
-      if (!found) {
+      let target = source.find((entry) => entry.code.toUpperCase() === normalized);
+      if (!target && SHARE_CODE_PATTERN.test(normalized)) {
+        target = buildShareDiscountEntry(normalized);
+      }
+
+      if (!target) {
         setSelectedDiscount(null);
         setDiscountAmount(0);
         setDiscountFeedback(null);
@@ -145,7 +171,7 @@ const Checkout: React.FC = () => {
         return false;
       }
 
-      const amount = calculateDiscountAmount(found);
+      const amount = calculateDiscountAmount(target);
       if (amount <= 0) {
         setSelectedDiscount(null);
         setDiscountAmount(0);
@@ -154,23 +180,23 @@ const Checkout: React.FC = () => {
         return false;
       }
 
-      setSelectedDiscount(found);
+      setSelectedDiscount(target);
       setDiscountAmount(amount);
-      const descriptorParts = [found.label, found.description]
+      const descriptorParts = [target.label, target.description]
         .map((part) => (typeof part === "string" ? part.trim() : ""))
         .filter((part) => part.length > 0);
-      const descriptor = descriptorParts.length > 0 ? descriptorParts.join(" · ") : found.code;
+      const descriptor = descriptorParts.length > 0 ? descriptorParts.join(" · ") : target.code;
       setDiscountFeedback(`Aplicaste ${formatArs(amount)} con ${descriptor}.`);
       setDiscountError(null);
-      setDiscountCodeInput(found.code);
+      setDiscountCodeInput(target.code);
       try {
-        window.sessionStorage.setItem("pt_checkout_discount", found.code);
+        window.sessionStorage.setItem("pt_checkout_discount", target.code);
       } catch {
         /* noop */
       }
       return true;
     },
-    [availableDiscounts, calculateDiscountAmount]
+    [availableDiscounts, buildShareDiscountEntry, calculateDiscountAmount]
   );
 
   const clearDiscount = useCallback(() => {
@@ -179,6 +205,7 @@ const Checkout: React.FC = () => {
     setDiscountFeedback(null);
     setDiscountError(null);
     setDiscountCodeInput("");
+    setDiscountListOpen(false);
     try {
       window.sessionStorage.removeItem("pt_checkout_discount");
     } catch {
@@ -187,17 +214,20 @@ const Checkout: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (!isRegistered || !backendUserId) {
-      setAvailableDiscounts((prev) => (prev.length > 0 ? [] : prev));
-      if (
-        selectedDiscount ||
-        discountAmount > 0 ||
-        discountFeedback ||
-        discountError ||
-        discountCodeInput
-      ) {
-        clearDiscount();
+    if (wasRegisteredRef.current && !isRegistered) {
+      setAvailableDiscounts([]);
+      clearDiscount();
+      try {
+        window.sessionStorage.removeItem("pt_checkout_discount");
+      } catch {
+        /* noop */
       }
+    }
+    wasRegisteredRef.current = isRegistered;
+  }, [clearDiscount, isRegistered]);
+
+  useEffect(() => {
+    if (!isRegistered || !backendUserId) {
       return;
     }
 
@@ -243,7 +273,7 @@ const Checkout: React.FC = () => {
               /* noop */
             }
           }
-        } else if (selectedDiscount) {
+        } else if (selectedDiscount?.origin === "owned") {
           const stillValid = snapshot.active.find((entry) => entry.code === selectedDiscount.code);
           if (!stillValid) {
             clearDiscount();
@@ -257,18 +287,7 @@ const Checkout: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, [
-    applyDiscountCode,
-    backendUserId,
-    clearDiscount,
-    discountAmount,
-    discountCodeInput,
-    discountError,
-    discountFeedback,
-    ensureUserData,
-    isRegistered,
-    selectedDiscount,
-  ]);
+  }, [applyDiscountCode, backendUserId, clearDiscount, ensureUserData, isRegistered, selectedDiscount]);
 
   useEffect(() => {
     if (!selectedDiscount) {
@@ -281,16 +300,21 @@ const Checkout: React.FC = () => {
     }
     if (Math.abs(updatedAmount - discountAmount) > 0.01) {
       setDiscountAmount(updatedAmount);
-      const descriptorParts = [selectedDiscount.label, selectedDiscount.description]
-        .map((part) => (typeof part === "string" ? part.trim() : ""))
-        .filter((part) => part.length > 0);
-      const descriptor = descriptorParts.length > 0 ? descriptorParts.join(" · ") : selectedDiscount.code;
-      setDiscountFeedback(`Aplicaste ${formatArs(updatedAmount)} con ${descriptor}.`);
+      setDiscountFeedback(`Aplicaste ${formatArs(updatedAmount)} con ${describeDiscount(selectedDiscount)}.`);
     }
-  }, [calculateDiscountAmount, clearDiscount, discountAmount, selectedDiscount, total]);
+  }, [calculateDiscountAmount, clearDiscount, describeDiscount, discountAmount, selectedDiscount, total]);
+
+  useEffect(() => {
+    if (!hasAvailableDiscounts) {
+      setDiscountListOpen(false);
+    }
+  }, [hasAvailableDiscounts]);
 
   const handleApplyDiscount = useCallback(() => {
-    applyDiscountCode(discountCodeInput);
+    const success = applyDiscountCode(discountCodeInput);
+    if (success) {
+      setDiscountListOpen(false);
+    }
   }, [applyDiscountCode, discountCodeInput]);
   const persistProfileSnapshot = useCallback(
     (data: Partial<OrderForm>) => {
@@ -625,26 +649,48 @@ const Checkout: React.FC = () => {
       };
 
       if (selectedDiscount && discountAmount > 0) {
-        orderPayload.discountCode = selectedDiscount.code;
-        orderPayload.discountTotal = Number(discountAmount.toFixed(2));
-        orderPayload.metadata = {
-          ...orderPayload.metadata,
-          appliedDiscount: {
-            code: selectedDiscount.code,
-            amount: Number(discountAmount.toFixed(2)),
-            label: selectedDiscount.label ?? null,
-            description: selectedDiscount.description ?? null,
-          },
-        };
+        const discountValue = Number(discountAmount.toFixed(2));
+        orderPayload.discountTotal = discountValue;
+        if (selectedDiscount.origin === "share") {
+          orderPayload.shareCode = selectedDiscount.code;
+          orderPayload.metadata = {
+            ...orderPayload.metadata,
+            appliedDiscount: null,
+            appliedShareCoupon: {
+              code: selectedDiscount.code,
+              amount: discountValue,
+              percentage: SHARE_COUPON_PERCENTAGE,
+            },
+          };
+        } else {
+          orderPayload.discountCode = selectedDiscount.code;
+          orderPayload.metadata = {
+            ...orderPayload.metadata,
+            appliedDiscount: {
+              code: selectedDiscount.code,
+              amount: discountValue,
+              label: selectedDiscount.label ?? null,
+              description: selectedDiscount.description ?? null,
+            },
+            appliedShareCoupon: null,
+          };
+        }
       }
 
       if (!isRegistered) {
         const fallbackMessage = buildPedidoMessage();
         const fallbackWhatsappUrl = waLink(WHATSAPP_NUMBER, fallbackMessage);
 
-        void api
-          .createOrder(orderPayload)
-          .catch((error) => console.error("No se pudo registrar el pedido del invitado", error));
+        const shouldAwaitOrder = Boolean(selectedDiscount && discountAmount > 0);
+        const orderPromise = api.createOrder(orderPayload);
+
+        if (shouldAwaitOrder) {
+          await orderPromise;
+        } else {
+          void orderPromise.catch((error) =>
+            console.error("No se pudo registrar el pedido del invitado", error)
+          );
+        }
 
         const elapsedGuest = Date.now() - submitStart;
         const remainingGuest = Math.max(0, GUEST_SUBMIT_TRANSITION_MS - elapsedGuest);
@@ -682,6 +728,19 @@ const Checkout: React.FC = () => {
     } catch (error) {
       console.error("No se pudo crear el pedido", error);
       setIsSubmitting(false);
+      if (selectedDiscount) {
+        let fallback = "No pudimos aplicar el código. Probá nuevamente.";
+        if (error instanceof Error) {
+          const match = error.message.match(/"message":"([^"]+)"/);
+          if (match && match[1]) {
+            fallback = match[1];
+          } else {
+            fallback = error.message;
+          }
+        }
+        setDiscountFeedback(null);
+        setDiscountError(fallback);
+      }
       return;
     }
 
@@ -836,6 +895,112 @@ const Checkout: React.FC = () => {
       );
     });
 
+  const renderDiscountSection = (showOwnedList: boolean) => (
+    <div className="checkout-discount" aria-label="Aplicar código de descuento o invitación">
+      <label className="checkout-discount__label" htmlFor="checkout-discount-input">
+        Código de descuento o invitación
+      </label>
+      <div className="checkout-discount__field-row">
+        <input
+          id="checkout-discount-input"
+          type="text"
+          name="discount"
+          value={discountCodeInput}
+          onChange={(event) => {
+            const value = event.target.value.toUpperCase();
+            setDiscountCodeInput(value);
+            setDiscountError(null);
+            if (!value) {
+              setDiscountFeedback(null);
+            }
+          }}
+          placeholder={
+            showOwnedList && hasAvailableDiscounts
+              ? "Ingresá tu código o elegí uno"
+              : "Ingresá tu código"
+          }
+          autoComplete="off"
+          className="checkout-discount__input"
+          inputMode="text"
+        />
+        <button
+          type="button"
+          className="btn-secondary btn-sm checkout-discount__apply"
+          onClick={handleApplyDiscount}
+        >
+          Aplicar
+        </button>
+      </div>
+      <div className="checkout-discount__feedback-row" aria-live="polite">
+        {discountError ? (
+          <span className="checkout-discount__feedback checkout-discount__feedback--error">
+            {discountError}
+          </span>
+        ) : discountFeedback ? (
+          <span className="checkout-discount__feedback checkout-discount__feedback--success">
+            {discountFeedback}
+          </span>
+        ) : null}
+      </div>
+      {selectedDiscount && (
+        <button
+          type="button"
+          className="btn-soft btn-sm checkout-discount__clear"
+          onClick={clearDiscount}
+        >
+          Quitar código
+        </button>
+      )}
+      {showOwnedList && hasAvailableDiscounts && (
+        <>
+          <button
+            type="button"
+            className="checkout-discount__toggle btn-ghost"
+            onClick={() => setDiscountListOpen((prev) => !prev)}
+            aria-expanded={discountListOpen}
+          >
+            {discountListOpen
+              ? "Ocultar códigos disponibles"
+              : `Ver códigos disponibles (${availableDiscounts.length})`}
+          </button>
+          {discountListOpen && (
+            <ul className="checkout-discount__list">
+              {availableDiscounts.map((entry) => {
+                const valueLabel = entry.percentage
+                  ? `${Number(entry.percentage)}%`
+                  : formatArs(Number(entry.value));
+                return (
+                  <li key={entry.id}>
+                    <button
+                      type="button"
+                      className={`checkout-discount__item${
+                        selectedDiscount?.code === entry.code ? " is-active" : ""
+                      }`}
+                      onClick={() => {
+                        applyDiscountCode(entry.code);
+                        setDiscountListOpen(false);
+                      }}
+                    >
+                      <span className="checkout-discount__item-code">{entry.code}</span>
+                      <span className="checkout-discount__item-meta">
+                        {valueLabel} · {describeDiscount(entry)}
+                      </span>
+                      {entry.expiresAt && (
+                        <span className="checkout-discount__item-extra">
+                          Vence {new Date(entry.expiresAt).toLocaleDateString("es-AR")}
+                        </span>
+                      )}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </>
+      )}
+    </div>
+  );
+
   if (!isRegistered) {
     return (
       <div ref={formTopRef} className="container checkout-shell checkout-shell--guest">
@@ -915,6 +1080,7 @@ const Checkout: React.FC = () => {
             ) : (
               <>
                 <ul className="checkout-summary__list">{renderSummaryList(summaryItemsToRender)}</ul>
+                {renderDiscountSection(false)}
                 <div className="checkout-summary__totals">
                   <div className="checkout-summary__line">
                     <span>Subtotal</span>
@@ -1053,76 +1219,7 @@ const Checkout: React.FC = () => {
               ) : (
                 <>
                   <ul className="checkout-summary__list">{renderSummaryList(summaryItemsToRender)}</ul>
-                  {isRegistered && (
-                    <div className="checkout-discount" aria-label="Aplicar código de descuento">
-                      <div className="checkout-discount__header">
-                        <span>¿Tenés un código de descuento?</span>
-                        {selectedDiscount && (
-                          <button
-                            type="button"
-                            className="btn-soft btn-sm"
-                            onClick={clearDiscount}
-                          >
-                            Quitar código
-                          </button>
-                        )}
-                      </div>
-                      <div className="checkout-discount__field">
-                        <input
-                          type="text"
-                          name="discount"
-                          value={discountCodeInput}
-                          onChange={(event) => {
-                            const value = event.target.value.toUpperCase();
-                            setDiscountCodeInput(value);
-                            setDiscountError(null);
-                            if (!value) {
-                              setDiscountFeedback(null);
-                            }
-                          }}
-                          placeholder={availableDiscounts.length ? "Ingresá tu código o elegí uno" : "Ingresá tu código"}
-                          autoComplete="off"
-                          className="checkout-discount__input"
-                          inputMode="text"
-                        />
-                        <button type="button" className="btn-secondary btn-sm" onClick={handleApplyDiscount}>
-                          Aplicar
-                        </button>
-                      </div>
-                      {discountError && (
-                        <p className="checkout-discount__feedback checkout-discount__feedback--error">{discountError}</p>
-                      )}
-                      {discountFeedback && !discountError && (
-                        <p className="checkout-discount__feedback checkout-discount__feedback--success">{discountFeedback}</p>
-                      )}
-                      {availableDiscounts.length > 0 && (
-                        <div className="checkout-discount__chips" role="list">
-                          {availableDiscounts.map((entry) => (
-                            <button
-                              key={entry.id}
-                              type="button"
-                              title={[
-                                entry.label,
-                                entry.description,
-                              ]
-                                .map((part) => (typeof part === "string" ? part.trim() : ""))
-                                .filter((part) => part.length > 0)
-                                .join(" · ") || entry.code}
-                              className={`checkout-discount__chip${selectedDiscount?.code === entry.code ? " is-active" : ""}`}
-                              onClick={() => applyDiscountCode(entry.code)}
-                            >
-                              <span>{entry.code}</span>
-                              <small>
-                                {entry.percentage
-                                  ? `${Number(entry.percentage)}%`
-                                  : formatArs(Number(entry.value))}
-                              </small>
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
+                  {renderDiscountSection(isRegistered && hasAvailableDiscounts)}
                   {isRegistered && items.length > SUMMARY_PREVIEW_COUNT && (
                     <button
                       type="button"

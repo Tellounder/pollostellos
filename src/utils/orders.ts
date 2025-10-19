@@ -18,6 +18,8 @@ export type DiscountEntry = {
   expiresAt?: string | null;
   usesRemaining: number;
   totalUses: number;
+  origin?: "owned" | "share";
+  sharePercentage?: number | null;
 };
 
 type DiscountHistory = {
@@ -91,6 +93,8 @@ export const processDiscounts = (detail: ApiUserDetail, now: number = Date.now()
       expiresAt,
       usesRemaining,
       totalUses: uses,
+      origin: "owned",
+      sharePercentage: null,
     });
 
     return acc;

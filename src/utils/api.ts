@@ -354,11 +354,20 @@ export type OrderMetadata = {
     label?: string | null;
     description?: string | null;
   } | null;
+  appliedShareCoupon?: {
+    code: string;
+    amount: number;
+    percentage: number;
+    ownerId?: string | null;
+    ownerEmail?: string | null;
+    ownerDisplayName?: string | null;
+  } | null;
 };
 
 export type CreateOrderPayload = {
   userId?: string;
   discountCode?: string;
+  shareCode?: string;
   customerName: string;
   customerEmail: string;
   customerPhone?: string;

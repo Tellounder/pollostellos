@@ -137,6 +137,14 @@
   gap: clamp(16px, 3.6vw, 24px);
 }
 
+@media (min-width: 960px) {
+  .checkout-secondary {
+    position: sticky;
+    top: clamp(16px, 4vw, 28px);
+    align-self: flex-start;
+  }
+}
+
 .checkout-form-grid {
   display: grid;
   gap: clamp(10px, 2.2vw, 16px);
@@ -337,27 +345,25 @@
 }
 
 .checkout-discount {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
   margin-top: 16px;
-  padding: 12px;
+  padding: 12px 14px;
   border-radius: calc(var(--radius-md) - 4px);
   border: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
   background: color-mix(in srgb, var(--card) 94%, rgba(255, 255, 255, 0.06));
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
-.checkout-discount__header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  font-size: 0.9rem;
-  color: var(--text-base);
+.checkout-discount__label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-strong);
 }
 
-.checkout-discount__field {
-  display: flex;
+.checkout-discount__field-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 8px;
   align-items: center;
 }
@@ -366,7 +372,7 @@
   flex: 1 1 auto;
   border-radius: var(--btn-radius);
   border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
-  padding: 0.6rem 0.8rem;
+  padding: 0.55rem 0.75rem;
   font-size: 0.92rem;
   background: color-mix(in srgb, var(--card) 92%, rgba(255, 255, 255, 0.08));
   color: var(--text-base);
@@ -378,9 +384,18 @@
   box-shadow: var(--focus-ring);
 }
 
+.checkout-discount__apply {
+  white-space: nowrap;
+}
+
+.checkout-discount__feedback-row {
+  min-height: 1em;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
 .checkout-discount__feedback {
   margin: 0;
-  font-size: 0.82rem;
 }
 
 .checkout-discount__feedback--error {
@@ -391,34 +406,84 @@
   color: color-mix(in srgb, var(--primary) 70%, var(--text-strong) 30%);
 }
 
-.checkout-discount__chips {
+.checkout-discount__clear {
+  align-self: flex-start;
+  margin-top: 2px;
+}
+
+.checkout-discount__toggle {
+  border: none;
+  background: none;
+  padding: 0;
+  font-weight: 600;
+  font-size: 0.82rem;
+  color: color-mix(in srgb, var(--primary) 80%, var(--text-strong) 20%);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+}
+
+.checkout-discount__toggle:hover {
+  color: color-mix(in srgb, var(--primary) 95%, var(--text-strong) 5%);
+}
+
+.checkout-discount__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: 8px;
 }
 
-.checkout-discount__chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  border-radius: 999px;
+.checkout-discount__item {
+  width: 100%;
+  border-radius: calc(var(--radius-md) - 4px);
   border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
-  background: color-mix(in srgb, var(--card) 92%, rgba(255, 255, 255, 0.05));
-  padding: 6px 12px;
-  font-size: 0.82rem;
+  background: color-mix(in srgb, var(--card) 92%, rgba(255, 255, 255, 0.06));
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  text-align: left;
   cursor: pointer;
-  transition: background 0.2s ease, border 0.2s ease;
+  transition: border-color 0.2s ease, background 0.2s ease;
 }
 
-.checkout-discount__chip small {
+.checkout-discount__item:hover,
+.checkout-discount__item.is-active {
+  border-color: color-mix(in srgb, var(--primary) 35%, transparent);
+  background: color-mix(in srgb, var(--card) 88%, rgba(255, 214, 146, 0.12));
+}
+
+.checkout-discount__item-code {
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.checkout-discount__item-meta {
   font-size: 0.78rem;
+  color: var(--text-muted);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.checkout-discount__item-extra {
+  font-size: 0.75rem;
   color: var(--text-muted);
 }
 
-.checkout-discount__chip:hover,
-.checkout-discount__chip.is-active {
-  border-color: color-mix(in srgb, var(--primary) 40%, transparent);
-  background: color-mix(in srgb, var(--primary) 12%, var(--card) 88%);
+@media (max-width: 640px) {
+  .checkout-discount__field-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .checkout-discount__apply {
+    width: 100%;
+  }
 }
 
 .checkout-summary__toggle {
