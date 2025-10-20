@@ -106,6 +106,57 @@ const ORDER_PIPELINE: Array<{ status: OrderStatus; label: string; helper: string
 
 const ORDER_SEQUENCE: OrderStatus[] = ["PENDING", "PREPARING", "CONFIRMED", "FULFILLED"];
 
+type OrderTabId = "pipeline" | "pending" | "preparing" | "confirmed" | "fulfilled" | "cancelled";
+
+const ORDER_TABS: Array<{
+  id: OrderTabId;
+  label: string;
+  helper: string;
+  statuses?: OrderStatus[];
+  defaultLimit?: number;
+}> = [
+  {
+    id: "pipeline",
+    label: "Pipeline",
+    helper: "Vista en columnas para gestionar en vivo.",
+  },
+  {
+    id: "pending",
+    label: "Pendientes",
+    helper: "Pedidos que esperan ser tomados.",
+    statuses: ["PENDING"],
+    defaultLimit: 40,
+  },
+  {
+    id: "preparing",
+    label: "En preparación",
+    helper: "Pedidos en cocina o empaquetado.",
+    statuses: ["PREPARING"],
+    defaultLimit: 40,
+  },
+  {
+    id: "confirmed",
+    label: "Listos",
+    helper: "Listos para retirar o entregar.",
+    statuses: ["CONFIRMED"],
+    defaultLimit: 40,
+  },
+  {
+    id: "fulfilled",
+    label: "Completados",
+    helper: "Últimos pedidos cerrados.",
+    statuses: ["FULFILLED"],
+    defaultLimit: 50,
+  },
+  {
+    id: "cancelled",
+    label: "Cancelados",
+    helper: "Órdenes anuladas recientemente.",
+    statuses: ["CANCELLED"],
+    defaultLimit: 30,
+  },
+];
+
 const statusLabels: Record<OrderStatus, string> = {
   DRAFT: "Borrador",
   PENDING: "Pendiente",
@@ -235,6 +286,10 @@ export function AdminPanel({ initialSection = "orders" }: AdminPanelProps) {
     metrics: true,
     backlog: true,
   });
+  const [ordersTab, setOrdersTab] = useState<OrderTabId>("pipeline");
+  const [listVisibleLimit, setListVisibleLimit] = useState<number>(
+    ORDER_TABS.find((tab) => tab.id === "fulfilled")?.defaultLimit ?? 40
+  );
   const toggleOrderFold = (key: keyof OrderFoldState) =>
     setOrderFold((previous) => ({ ...previous, [key]: !previous[key] }));
   const toggleClientFold = (key: keyof ClientFoldState) =>
@@ -655,6 +710,15 @@ export function AdminPanel({ initialSection = "orders" }: AdminPanelProps) {
     };
   }, [orders.length, ordersByStatus.CONFIRMED, ordersByStatus.FULFILLED, ordersByStatus.PENDING, ordersByStatus.PREPARING]);
 
+  useEffect(() => {
+    const tabConfig = ORDER_TABS.find((tab) => tab.id === ordersTab);
+    if (tabConfig?.defaultLimit) {
+      setListVisibleLimit(tabConfig.defaultLimit);
+    } else {
+      setListVisibleLimit(40);
+    }
+  }, [ordersTab]);
+
   if (!user) {
     return null;
   }
@@ -761,6 +825,22 @@ export function AdminPanel({ initialSection = "orders" }: AdminPanelProps) {
         helper: formatCurrency(operationsMetrics.fulfilledTodayValue),
       },
     ];
+
+    const tabConfig = ORDER_TABS.find((tab) => tab.id === ordersTab) ?? ORDER_TABS[0];
+    const isPipelineView = tabConfig.id === "pipeline";
+    const pipelineColumns = ORDER_PIPELINE.filter((column) => column.status !== "FULFILLED");
+    const tabOrders = isPipelineView
+      ? []
+      : tabConfig.statuses?.flatMap((status) => ordersByStatus[status] ?? []) ?? [];
+    const sortedTabOrders = isPipelineView
+      ? []
+      : [...tabOrders].sort((a, b) => {
+          const aDate = new Date(a.updatedAt ?? a.createdAt ?? Date.now()).getTime();
+          const bDate = new Date(b.updatedAt ?? b.createdAt ?? Date.now()).getTime();
+          return bDate - aDate;
+        });
+    const visibleTabOrders = isPipelineView ? [] : sortedTabOrders.slice(0, listVisibleLimit);
+    const tabHasMore = !isPipelineView && sortedTabOrders.length > listVisibleLimit;
 
     const detailContent = selectedOrder ? (
       <>
@@ -973,6 +1053,25 @@ export function AdminPanel({ initialSection = "orders" }: AdminPanelProps) {
         </header>
         {ordersError && <p className="admin-notice admin-notice--error">{ordersError}</p>}
 
+        <nav className={ordersStyles.tabBar} role="tablist" aria-label="Filtrar pedidos por estado">
+          {ORDER_TABS.map((tab) => {
+            const isActive = ordersTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                role="tab"
+                aria-selected={isActive}
+                className={cn(ordersStyles.tabButton, isActive && ordersStyles.tabButtonActive)}
+                onClick={() => setOrdersTab(tab.id)}
+              >
+                <span>{tab.label}</span>
+                <small>{tab.helper}</small>
+              </button>
+            );
+          })}
+        </nav>
+
         <div className={ordersStyles.stats}>
           {stats.map((stat) => (
             <article key={stat.label} className={ordersStyles.statCard}>
@@ -985,83 +1084,159 @@ export function AdminPanel({ initialSection = "orders" }: AdminPanelProps) {
 
         <div className={ordersStyles.workspace}>
           <div className={ordersStyles.pipeline}>
-            {ORDER_PIPELINE.map((column) => {
-              const columnOrders = ordersByStatus[column.status];
-              return (
-                <section key={column.status} className={ordersStyles.column}>
-                  <header>
-                    <div>
-                      <span>{column.label}</span>
-                      <small>{column.helper}</small>
-                    </div>
-                    <span className={ordersStyles.badge}>{columnOrders.length}</span>
-                  </header>
-                  {columnOrders.length === 0 ? (
-                    <p className={ordersStyles.empty}>Sin pedidos en esta etapa.</p>
-                  ) : (
-                    <div className={ordersStyles.list}>
-                      {columnOrders.map((order) => {
-                        const customerName = order.metadata?.customer?.name ?? "Sin identificar";
-                        const address = order.metadata?.delivery?.addressLine ?? "Retira en local";
-                        const placedAt = order.placedAt ?? order.createdAt;
-                        const total = formatCurrency(order.totalNet ?? order.totalGross ?? 0);
-                        const isSelected = selectedOrderId === order.id;
-                        const cardActions = renderOrderActions(order);
-                        return (
-                          <article
-                            key={order.id}
-                            className={cn(ordersStyles.card, isSelected && ordersStyles.cardActive)}
+            {isPipelineView ? (
+              pipelineColumns.map((column) => {
+                const columnOrders = ordersByStatus[column.status];
+                return (
+                  <section key={column.status} className={ordersStyles.column}>
+                    <header>
+                      <div>
+                        <span>{column.label}</span>
+                        <small>{column.helper}</small>
+                      </div>
+                      <span className={ordersStyles.badge}>{columnOrders.length}</span>
+                    </header>
+                    {columnOrders.length === 0 ? (
+                      <p className={ordersStyles.empty}>Sin pedidos en esta etapa.</p>
+                    ) : (
+                      <div className={ordersStyles.list}>
+                        {columnOrders.map((order) => {
+                          const customerName = order.metadata?.customer?.name ?? "Sin identificar";
+                          const address = order.metadata?.delivery?.addressLine ?? "Retira en local";
+                          const placedAt = order.placedAt ?? order.createdAt;
+                          const total = formatCurrency(order.totalNet ?? order.totalGross ?? 0);
+                          const isSelected = selectedOrderId === order.id;
+                          const cardActions = renderOrderActions(order);
+                          return (
+                            <article
+                              key={order.id}
+                              className={cn(ordersStyles.card, isSelected && ordersStyles.cardActive)}
+                              onClick={() => setSelectedOrderId(order.id)}
+                            >
+                              <div className={ordersStyles.cardHead}>
+                                <span className={ordersStyles.cardCode}>PT {formatOrderCode(order.number)}</span>
+                                <span className={cn(ordersStyles.cardStatus, pipelineStatusClass[order.status] ?? ordersStyles.cardStatusPending)}>
+                                  {statusLabels[order.status]}
+                                </span>
+                              </div>
+                              <div className={ordersStyles.cardBody}>
+                                <p className={ordersStyles.cardCustomer}>{customerName}</p>
+                                <p className={ordersStyles.cardAddress} title={address}>
+                                  {address}
+                                </p>
+                                <div className={ordersStyles.cardMeta}>
+                                  <span>{total}</span>
+                                  <span>{shortTimeFormatter.format(new Date(placedAt))}</span>
+                                </div>
+                              </div>
+                              {cardActions.length > 0 && (
+                                <div className={ordersStyles.actionGroup}>
+                                  {cardActions.map((action) => (
+                                    <button
+                                      key={action.key}
+                                      type="button"
+                                      className={cn(ordersStyles.actionChip, actionClassMap[action.intent] ?? ordersStyles.actionSecondary)}
+                                      onClick={(event) => {
+                                        event.stopPropagation();
+                                        action.handler();
+                                      }}
+                                      disabled={actionLoadingId === order.id || ordersLoading}
+                                    >
+                                      {action.label}
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                            </article>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </section>
+                );
+              })
+            ) : (
+              <section className={ordersStyles.listPanel} aria-live="polite">
+                <header className={ordersStyles.listHeader}>
+                  <div>
+                    <span>{tabConfig.label}</span>
+                    <small>{sortedTabOrders.length} pedidos</small>
+                  </div>
+                </header>
+                {visibleTabOrders.length === 0 ? (
+                  <p className={ordersStyles.empty}>No hay pedidos en este estado.</p>
+                ) : (
+                  <ul className={ordersStyles.listRows}>
+                    {visibleTabOrders.map((order) => {
+                      const customerName = order.metadata?.customer?.name ?? "Sin identificar";
+                      const address = order.metadata?.delivery?.addressLine ?? "Retira en local";
+                      const total = formatCurrency(order.totalNet ?? order.totalGross ?? 0);
+                      const placedAt = order.fulfilledAt ?? order.confirmedAt ?? order.preparingAt ?? order.placedAt ?? order.createdAt;
+                      const isSelected = selectedOrderId === order.id;
+                      const cardActions = renderOrderActions(order);
+                      return (
+                        <li key={order.id} className={cn(ordersStyles.listRow, isSelected && ordersStyles.listRowActive)}>
+                          <button
+                            type="button"
+                            className={ordersStyles.listRowButton}
                             onClick={() => setSelectedOrderId(order.id)}
                           >
-                            <div className={ordersStyles.cardHead}>
+                            <div className={ordersStyles.listRowHead}>
                               <span className={ordersStyles.cardCode}>PT {formatOrderCode(order.number)}</span>
                               <span className={cn(ordersStyles.cardStatus, pipelineStatusClass[order.status] ?? ordersStyles.cardStatusPending)}>
                                 {statusLabels[order.status]}
                               </span>
+                              <span className={ordersStyles.listRowTime}>{shortTimeFormatter.format(new Date(placedAt))}</span>
                             </div>
-                            <div className={ordersStyles.cardBody}>
-                              <p className={ordersStyles.cardCustomer}>{customerName}</p>
-                              <p className={ordersStyles.cardAddress} title={address}>
-                                {address}
-                              </p>
-                              <div className={ordersStyles.cardMeta}>
-                                <span>{total}</span>
-                                <span>{shortTimeFormatter.format(new Date(placedAt))}</span>
-                              </div>
+                            <p className={ordersStyles.listRowCustomer}>{customerName}</p>
+                            <p className={ordersStyles.listRowMeta}>
+                              <span title={address}>{address}</span>
+                              <span>{total}</span>
+                            </p>
+                          </button>
+                          {cardActions.length > 0 && (
+                            <div className={ordersStyles.listRowActions}>
+                              {cardActions.map((action) => (
+                                <button
+                                  key={action.key}
+                                  type="button"
+                                  className={cn(ordersStyles.actionChip, actionClassMap[action.intent] ?? ordersStyles.actionSecondary)}
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    action.handler();
+                                  }}
+                                  disabled={actionLoadingId === order.id || ordersLoading}
+                                >
+                                  {action.label}
+                                </button>
+                              ))}
                             </div>
-                            {cardActions.length > 0 && (
-                              <div className={ordersStyles.actionGroup}>
-                                {cardActions.map((action) => (
-                                  <button
-                                    key={action.key}
-                                    type="button"
-                                    className={cn(ordersStyles.actionChip, actionClassMap[action.intent] ?? ordersStyles.actionSecondary)}
-                                    onClick={(event) => {
-                                      event.stopPropagation();
-                                      action.handler();
-                                    }}
-                                    disabled={actionLoadingId === order.id || ordersLoading}
-                                  >
-                                    {action.label}
-                                  </button>
-                                ))}
-                              </div>
-                            )}
-                          </article>
-                        );
-                      })}
-                    </div>
-                  )}
-                </section>
-              );
-            })}
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+                {tabHasMore && (
+                  <div className={ordersStyles.listMore}>
+                    <button
+                      type="button"
+                      className="btn-ghost btn-pill"
+                      onClick={() => setListVisibleLimit((prev) => prev + (tabConfig.defaultLimit ?? 20))}
+                    >
+                      Ver más pedidos
+                    </button>
+                  </div>
+                )}
+              </section>
+            )}
           </div>
           <aside className={ordersStyles.detail} aria-live="polite">
             {detailContent}
           </aside>
         </div>
 
-        {ordersByStatus.CANCELLED.length > 0 && (
+        {isPipelineView && ordersByStatus.CANCELLED.length > 0 && (
           <footer className={ordersStyles.cancelled}>
             <h3>Cancelados recientes</h3>
             <div className={ordersStyles.cancelledList}>
